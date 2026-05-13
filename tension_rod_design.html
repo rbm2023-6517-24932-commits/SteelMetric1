@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Analysis - Tension Rods</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* --- Boot-Up Animation Styles --- */
+        #boot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-page); /* Matches your dark background */
+            z-index: 9999; /* Keeps it above everything else */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+
+        .boot-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .boot-line {
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            animation: load-line 1.8s ease-in-out forwards;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.6)); transform: scale(1.02); }
+        }
+
+        @keyframes load-line {
+            0% { width: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 300px; opacity: 1; }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        /* Ensure it doesn't show up when printing */
+        @media print {
+            #boot-overlay { display: none !important; }
+        }
+        /* --- End Boot-Up Animation Styles --- */
+        /* --- Back Button Styles --- */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: #3b82f6; 
+            transform: translateX(-3px); 
+        }
+
+        /* --- Glassmorphism Theme Variables --- */
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15); /* Cyan glow */
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12); /* Orange glow */
+        }
+
+        /* Main Glass Container */
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 850px; 
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 25px;
+            align-items: start;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .span-2 {
+            grid-column: span 2;
+        }
+
+        label {
+            font-size: 0.85rem; color: var(--text-label); font-weight: 500;
+        }
+
+        /* Glass Inputs */
+        input[type="number"], input[type="text"], select {
+            background-color: var(--glass-input);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input[readonly], select:disabled {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px top 50%;
+            background-size: 10px auto;
+            padding-right: 35px;
+        }
+        
+        select option { background-color: #111827; color: white; }
+
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        /* Custom Radio Buttons */
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            background-color: var(--glass-input);
+            padding: 14px 18px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .radio-group label {
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        input[type="radio"] {
+            accent-color: var(--accent-cyan);
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* Action Buttons */
+        .button-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 35px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            flex: 2;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+        }
+        .btn-primary:hover { 
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: transparent; 
+            color: var(--text-label); 
+            border: 1px solid var(--glass-border);
+            padding: 16px; 
+            border-radius: 8px; 
+            font-size: 0.95rem; 
+            font-weight: 600;
+            cursor: pointer; 
+            flex: 1; 
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            text-transform: uppercase;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .btn-orange {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            flex: 1;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+            text-transform: uppercase;
+        }
+        .btn-orange:hover {
+            box-shadow: 0 12px 25px rgba(249, 115, 22, 0.5); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        /* ADVANCED RESULTS PANEL (Glass Cards) */
+        .results-panel {
+            margin-top: 35px; 
+            animation: fadeIn 0.5s ease-out;
+            /* Flex is removed here so display: block via JS works perfectly */
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .summary-header {
+            font-size: 1.25rem; font-weight: bold; color: #ffffff; margin-bottom: 10px;
+            display: inline-block; border-bottom: 2px solid var(--accent-cyan); padding-bottom: 5px; align-self: flex-start;
+        }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .summary-item { display: flex; flex-direction: column; gap: 6px; }
+        .summary-label { font-size: 0.8rem; color: var(--text-label); text-transform: uppercase; letter-spacing: 1px;}
+        .summary-value { font-size: 1.4rem; font-weight: bold; color: white; }
+        
+        /* Neon Accents */
+        .val-cyan { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); }
+        .val-yellow { color: var(--accent-yellow); text-shadow: 0 0 10px rgba(253, 224, 71, 0.4); }
+        .val-green { color: var(--accent-green); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+
+    </style>
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL DESIGN</div>
+        <div class="boot-line"></div>
+    </div>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+
+<div class="bg-blob blob-1"></div>
+<div class="bg-blob blob-2"></div>
+
+<div class="calculator-container">
+    <div class="header">
+        <h1>STEEL DESIGN</h1>
+        <span class="badge">TENSION RODS</span>
+    </div>
+
+    <div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Design Method</label>
+                <select id="designMethod" required>
+                    <option value="" disabled selected hidden>Choose Design Method</option>
+                    <option value="LRFD">LRFD</option>
+                    <option value="ASD">ASD</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Steel Designation</label>
+                <select id="steelDesignation" onchange="updateGrades()" required>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Specific Grade</label>
+                <select id="steelGrade" onchange="updateFu()" required>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Ultimate Tensile Strength, Fu (ksi)</label>
+                <input type="number" id="fuInput" step="0.1">
+            </div>
+
+            <div class="form-group span-2">
+                <label>Load Type</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="loadType" value="prefactored" checked onchange="toggleLoadInputs()"> Pre-Factored / Combined Load</label>
+                    <label><input type="radio" name="loadType" value="separate" onchange="toggleLoadInputs()"> Separate DL & LL</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-grid" id="loadInputsArea">
+            <div class="form-group span-2" id="combinedLoadGroup">
+                <label>Required Load (kips)</label>
+                <input type="number" id="combinedLoad" placeholder="Enter combined load" step="0.1">
+            </div>
+            <div class="form-group" id="dlGroup" style="display: none;">
+                <label>Dead Load, DL (kips)</label>
+                <input type="number" id="deadLoad" placeholder="Enter DL" step="0.1">
+            </div>
+            <div class="form-group" id="llGroup" style="display: none;">
+                <label>Live Load, LL (kips)</label>
+                <input type="number" id="liveLoad" placeholder="Enter LL" step="0.1">
+            </div>
+        </div>
+
+        <div class="button-row">
+            <button class="btn-primary" onclick="calculateDesign()">Calculate Design</button>
+            <button class="btn-secondary" onclick="resetForm()">Reset</button>
+            <button class="btn-orange" id="savePdfBtn" onclick="savePDF()" style="display: none;">Save PDF</button>
+        </div>
+
+        <div class="results-panel" id="resultsPanel" style="display: none;">
+            <div class="result-card">
+                <div class="summary-header">DESIGN RESULTS</div>
+                
+                <div class="summary-grid">
+                    <div class="summary-item" id="resDesignLoad">
+                        <div class="summary-label">Design Load</div>
+                        <span class="summary-value val-cyan"></span>
+                    </div>
+                    <div class="summary-item" id="resReqDiameter">
+                        <div class="summary-label">Required Diameter</div>
+                        <span class="summary-value val-yellow"></span>
+                    </div>
+                </div>
+
+                <div class="summary-item" id="resStandardRod" style="margin-top: 15px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.08);">
+                    <div class="summary-label" style="color: var(--accent-green); font-size: 0.9rem; margin-bottom: 5px;">Recommended Tension Rod</div>
+                    <span class="summary-value val-green" style="font-size: 2.2rem; text-shadow: 0 4px 20px rgba(16,185,129,0.3);"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Boot-Up Animation Trigger ---
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const overlay = document.getElementById('boot-overlay');
+            if (overlay) {
+                overlay.classList.add('hide-boot');
+            }
+        }, 1800); // 1.8 second delay before revealing the site
+    });
+    // --- DATABASE ---
+    const steelDatabase = {
+        "A36": { "Standard": 58.0 },
+        "A53": { "Gr. B": 60.0 },
+        "A500": { "Gr. B": 58.0, "Gr. C": 62.0 },
+        "A501": { "Gr. A": 58.0, "Gr. B": 70.0 },
+        "A529": { "Gr. 50": 65.0, "Gr. 55": 70.0 },
+        "A572": { "Gr. 42": 60.0, "Gr. 50": 65.0, "Gr. 55": 70.0, "Gr. 60": 75.0, "Gr. 65": 80.0 },
+        "A588": { "Standard": 70.0 },
+        "A618": { "Gr. Ia, Ib, & II": 70.0, "Gr. III": 65.0 },
+        "A709": { "Grade 36": 58.0, "Grade 50": 65.0, "Grade 50S": 65.0, "Grade 50W": 70.0 },
+        "A847": { "Standard": 70.0 },
+        "A913": { "Grade 50": 65.0, "Grade 60": 75.0, "Grade 70": 80.0, "Standard": 90.0 },
+        "A992": { "Standard": 65.0 },
+        "A1043": { "Grade 36": 58.0, "Grade 50": 65.0 },
+        "A1065": { "Gr. 50": 60.0, "Gr. 50W": 70.0 },
+        "A1085": { "Gr. A": 65.0 }
+    };
+
+    // ROD SIZES (every 1/8" increment from 1/4" to 2")
+    const rodSizes = [
+        { dec: 0.25,   str: "1/4" }, 
+        { dec: 0.375,  str: "3/8" },
+        { dec: 0.5,    str: "1/2" }, 
+        { dec: 0.625,  str: "5/8" },
+        { dec: 0.75,   str: "3/4" }, 
+        { dec: 0.875,  str: "7/8" },
+        { dec: 1.0,    str: "1" }, 
+        { dec: 1.125,  str: "1-1/8" },
+        { dec: 1.25,   str: "1-1/4" }, 
+        { dec: 1.375,  str: "1-3/8" },
+        { dec: 1.5,    str: "1-1/2" }, 
+        { dec: 1.625,  str: "1-5/8" },
+        { dec: 1.75,   str: "1-3/4" }, 
+        { dec: 1.875,  str: "1-7/8" },
+        { dec: 2.0,    str: "2" }
+    ];
+
+    let currentReportData = {};
+
+    function initDropdowns() {
+        const desigSelect = document.getElementById("steelDesignation");
+        
+        // Add Designation Placeholder
+        let placeholderOpt = document.createElement("option");
+        placeholderOpt.value = "";
+        placeholderOpt.disabled = true;
+        placeholderOpt.selected = true;
+        placeholderOpt.hidden = true;
+        placeholderOpt.innerText = "Choose Steel Designation";
+        desigSelect.appendChild(placeholderOpt);
+
+        let customOpt = document.createElement("option");
+        customOpt.value = "Custom";
+        customOpt.innerText = "Custom...";
+        desigSelect.appendChild(customOpt);
+
+        for (const designation in steelDatabase) {
+            let opt = document.createElement("option");
+            opt.value = designation;
+            opt.innerText = designation;
+            desigSelect.appendChild(opt);
+        }
+
+        desigSelect.value = ""; // Default to placeholder
+        updateGrades(); 
+    }
+
+    function updateGrades() {
+        const desig = document.getElementById("steelDesignation").value;
+        const gradeSelect = document.getElementById("steelGrade");
+        const fuInput = document.getElementById("fuInput");
+
+        gradeSelect.innerHTML = ""; 
+
+        if (!desig) {
+            // Unselected state
+            gradeSelect.disabled = true;
+            let opt = document.createElement("option");
+            opt.value = "";
+            opt.disabled = true;
+            opt.selected = true;
+            opt.hidden = true;
+            opt.innerText = "Choose Specific Grade";
+            gradeSelect.appendChild(opt);
+            
+            fuInput.readOnly = true;
+            fuInput.value = "";
+            return;
+        }
+
+        if (desig === "Custom") {
+            gradeSelect.disabled = true;
+            let opt = document.createElement("option");
+            opt.value = "Custom";
+            opt.innerText = "N/A - Custom";
+            gradeSelect.appendChild(opt);
+
+            fuInput.readOnly = false;
+            fuInput.value = "";
+            fuInput.focus();
+        } else {
+            const grades = steelDatabase[desig];
+            const gradeKeys = Object.keys(grades);
+            
+            // Add Grade Placeholder if there are multiple options
+            if (gradeKeys.length > 1) {
+                let placeholderOpt = document.createElement("option");
+                placeholderOpt.value = "";
+                placeholderOpt.disabled = true;
+                placeholderOpt.selected = true;
+                placeholderOpt.hidden = true;
+                placeholderOpt.innerText = "Choose Specific Grade";
+                gradeSelect.appendChild(placeholderOpt);
+            }
+
+            for (const grade of gradeKeys) {
+                let opt = document.createElement("option");
+                opt.value = grade;
+                opt.innerText = grade;
+                gradeSelect.appendChild(opt);
+            }
+
+            gradeSelect.disabled = (gradeKeys.length === 1);
+
+            // Auto select if only 1 option, otherwise default to placeholder
+            if (gradeKeys.length === 1) {
+                gradeSelect.value = gradeKeys[0];
+            } else {
+                gradeSelect.value = "";
+            }
+
+            updateFu();
+        }
+    }
+
+    function updateFu() {
+        const desig = document.getElementById("steelDesignation").value;
+        if (!desig || desig === "Custom") return;
+
+        const grade = document.getElementById("steelGrade").value;
+        const fuInput = document.getElementById("fuInput");
+
+        if (!grade) {
+            fuInput.value = "";
+            return;
+        }
+
+        fuInput.readOnly = true;
+        fuInput.value = steelDatabase[desig][grade];
+    }
+
+    function toggleLoadInputs() {
+        const loadType = document.querySelector('input[name="loadType"]:checked').value;
+        const combinedGroup = document.getElementById("combinedLoadGroup");
+        const dlGroup = document.getElementById("dlGroup");
+        const llGroup = document.getElementById("llGroup");
+
+        if (loadType === "prefactored") {
+            combinedGroup.style.display = "flex";
+            dlGroup.style.display = "none";
+            llGroup.style.display = "none";
+        } else {
+            combinedGroup.style.display = "none";
+            dlGroup.style.display = "flex";
+            llGroup.style.display = "flex";
+        }
+    }
+
+    function calculateDesign() {
+        const method = document.getElementById("designMethod").value;
+        const desig = document.getElementById("steelDesignation").value;
+        const grade = desig === "Custom" ? "Custom" : document.getElementById("steelGrade").value;
+        
+        // Prevent calculation if placeholders aren't filled
+        if (!method || !desig || !grade) {
+            alert("Please choose a Design Method, Steel Designation, and Specific Grade.");
+            return;
+        }
+
+        const fu = parseFloat(document.getElementById("fuInput").value);
+        const loadType = document.querySelector('input[name="loadType"]:checked').value;
+        
+        let targetLoad = 0;
+        let dl = 0;
+        let ll = 0;
+        let combinedVal = 0;
+
+        if (loadType === "prefactored") {
+            combinedVal = parseFloat(document.getElementById("combinedLoad").value);
+            targetLoad = combinedVal;
+        } else {
+            dl = parseFloat(document.getElementById("deadLoad").value) || 0;
+            ll = parseFloat(document.getElementById("liveLoad").value) || 0;
+            
+            if (method === "LRFD") {
+                targetLoad = Math.max((1.2 * dl) + (1.6 * ll), 1.4 * dl);
+            } else if (method === "ASD") {
+                targetLoad = dl + ll;
+            }
+        }
+
+        if (isNaN(targetLoad) || targetLoad <= 0 || isNaN(fu) || fu <= 0) {
+            alert("Please enter valid positive numbers for Loads and Fu.");
+            return;
+        }
+
+        let requiredDiameter = 0;
+        const pi = Math.PI;
+
+        if (method === "LRFD") {
+            const denominator = 0.75 * 0.75 * fu * 0.25 * pi;
+            requiredDiameter = Math.sqrt(targetLoad / denominator);
+        } else if (method === "ASD") {
+            const denominator = 0.5 * 0.75 * fu * 0.25 * pi;
+            requiredDiameter = Math.sqrt(targetLoad / denominator);
+        }
+
+        let recommendedSize = "";
+        for (let i = 0; i < rodSizes.length; i++) {
+            if (rodSizes[i].dec >= requiredDiameter) {
+                recommendedSize = rodSizes[i].str + " in";
+                break;
+            }
+        }
+        
+        // If required diameter exceeds largest available standard rod (2 in)
+        if (recommendedSize === "") {
+            recommendedSize = requiredDiameter.toFixed(3) + " in"; // Just use exact calculated diameter
+        }
+
+        // Display in UI
+        document.getElementById("resDesignLoad").querySelector("span").innerText = targetLoad.toFixed(2) + " kips (" + method + ")";
+        document.getElementById("resReqDiameter").querySelector("span").innerText = requiredDiameter.toFixed(3) + " in";
+        document.getElementById("resStandardRod").querySelector("span").innerText = recommendedSize;
+        
+        document.getElementById("resultsPanel").style.display = "block";
+        document.getElementById("savePdfBtn").style.display = "block";
+
+        // Save data for PDF
+        currentReportData = {
+            method: method,
+            desig: desig,
+            grade: grade,
+            fu: fu.toFixed(1),
+            loadType: loadType === "prefactored" ? "Pre-Factored / Combined" : "Separate DL & LL",
+            combinedVal: combinedVal.toFixed(2),
+            dl: dl.toFixed(2),
+            ll: ll.toFixed(2),
+            targetLoad: targetLoad.toFixed(2),
+            reqDiam: requiredDiameter.toFixed(3),
+            recSize: recommendedSize
+        };
+    }
+
+    function resetForm() {
+        document.getElementById("designMethod").value = "";
+        document.getElementById("steelDesignation").value = "";
+        updateGrades(); // Re-applies the placeholders automatically
+        
+        document.querySelector('input[name="loadType"][value="prefactored"]').checked = true;
+        toggleLoadInputs();
+        
+        document.getElementById("combinedLoad").value = "";
+        document.getElementById("deadLoad").value = "";
+        document.getElementById("liveLoad").value = "";
+        
+        document.getElementById("resultsPanel").style.display = "none";
+        document.getElementById("savePdfBtn").style.display = "none";
+    }
+
+    function savePDF() {
+        let loadRowsHtml = "";
+        if (currentReportData.loadType === "Pre-Factored / Combined") {
+            loadRowsHtml = `
+                <tr><td style="padding: 10px; font-weight: bold; width: 40%; border-bottom: 1px solid #e5e7eb;">Input Load:</td>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.combinedVal} kips</td></tr>
+            `;
+        } else {
+            loadRowsHtml = `
+                <tr><td style="padding: 10px; font-weight: bold; width: 40%; border-bottom: 1px solid #e5e7eb;">Dead Load (DL):</td>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.dl} kips</td></tr>
+                <tr><td style="padding: 10px; font-weight: bold; width: 40%; border-bottom: 1px solid #e5e7eb;">Live Load (LL):</td>
+                <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.ll} kips</td></tr>
+            `;
+        }
+
+        const pdfHtmlString = `
+            <div style="font-family: Arial, sans-serif; padding: 40px; color: #000000; background-color: #ffffff; box-sizing: border-box;">
+                <div style="text-align: center; border-bottom: 3px solid #000000; padding-bottom: 15px; margin-bottom: 30px;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #000000; letter-spacing: 2px; text-transform: uppercase;">STEEL DESIGN</h1>
+                    <h2 style="margin: 8px 0 0 0; color: #f59e0b; font-size: 20px; letter-spacing: 1px; text-transform: uppercase;">TENSION RODS</h2>
+                </div>
+
+                <div style="margin-bottom: 35px;">
+                    <h3 style="background-color: #f3f4f6; padding: 10px 15px; margin: 0 0 15px 0; border-left: 5px solid #3b82f6; font-size: 16px; color: #000000;">INITIAL INPUTS</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #000000;">
+                        <tr><td style="padding: 10px; font-weight: bold; width: 40%; border-bottom: 1px solid #e5e7eb;">Design Method:</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.method}</td></tr>
+                        <tr><td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Steel Designation:</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.desig}</td></tr>
+                        <tr><td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Specific Grade:</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.grade}</td></tr>
+                        <tr><td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Ultimate Strength (Fu):</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.fu} ksi</td></tr>
+                        <tr><td style="padding: 10px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Load Type:</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.loadType}</td></tr>
+                        ${loadRowsHtml}
+                    </table>
+                </div>
+
+                <div>
+                    <h3 style="background-color: #f3f4f6; padding: 10px 15px; margin: 0 0 15px 0; border-left: 5px solid #064e3b; font-size: 16px; color: #000000;">CALCULATED RESULTS</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 15px; color: #000000;">
+                        <tr><td style="padding: 12px 10px; font-weight: bold; width: 40%; border-bottom: 1px solid #e5e7eb;">Design Target Load:</td>
+                            <td style="padding: 12px 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.targetLoad} kips</td></tr>
+                        <tr><td style="padding: 12px 10px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Required Rod Diameter:</td>
+                            <td style="padding: 12px 10px; border-bottom: 1px solid #e5e7eb;">${currentReportData.reqDiam} in</td></tr>
+                        <tr><td style="padding: 15px 10px; font-weight: bold; font-size: 18px; color: #064e3b;">Recommended Rod Size:</td>
+                            <td style="padding: 15px 10px; font-weight: bold; font-size: 18px; color: #064e3b;">${currentReportData.recSize}</td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        const opt = {
+            margin:       0.5,
+            filename:     'Tension_Rod_Design_Report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        
+        html2pdf().set(opt).from(pdfHtmlString).save();
+    }
+
+    window.onload = initDropdowns;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Design App - Bending Analysis</title>
+    <style>
+        /* --- Boot-Up Animation Styles --- */
+        #boot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-page); /* Matches your dark background */
+            z-index: 9999; /* Keeps it above everything else */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+
+        .boot-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .boot-line {
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            animation: load-line 1.8s ease-in-out forwards;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.6)); transform: scale(1.02); }
+        }
+
+        @keyframes load-line {
+            0% { width: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 300px; opacity: 1; }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        /* Ensure it doesn't show up when printing */
+        @media print {
+            #boot-overlay { display: none !important; }
+        }
+        /* --- End Boot-Up Animation Styles --- */
+        /* --- Back Button Styles --- */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: #3b82f6; 
+            transform: translateX(-3px); 
+        }
+
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15); /* Cyan glow */
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12); /* Orange glow */
+        }
+
+        /* Main Glass Container */
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 900px; 
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 25px;
+            align-items: start;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        .left-column-container, .right-column-container {
+            display: flex; 
+            flex-direction: column; 
+            gap: 18px;
+        }
+
+        .sub-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.85rem; color: var(--text-label); font-weight: 500;
+        }
+
+        /* Glass Inputs */
+        input, select {
+            background-color: var(--glass-input);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input[readonly], select:disabled {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px top 50%;
+            background-size: 10px auto;
+            padding-right: 35px;
+        }
+        
+        select option { background-color: #111827; color: white; }
+
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        /* Gradient Action Buttons */
+        .btn-calculate {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+            margin-top: 15px;
+        }
+        .btn-calculate:hover { 
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        /* ADVANCED RESULTS PANEL (Glass Cards) */
+        #results-area {
+            display: none; 
+        }
+
+        .results-panel {
+            margin-top: 35px; 
+            animation: fadeIn 0.5s ease-out;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .summary-header {
+            font-size: 1.25rem; font-weight: bold; color: #ffffff; margin-bottom: 20px;
+            display: inline-block; border-bottom: 2px solid var(--accent-cyan); padding-bottom: 5px;
+        }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .summary-item { display: flex; flex-direction: column; gap: 6px; }
+        .summary-label { font-size: 0.8rem; color: var(--text-label); text-transform: uppercase; letter-spacing: 1px;}
+        .summary-value { font-size: 1.3rem; font-weight: bold; color: white; }
+        
+        /* Neon Accents */
+        .val-cyan { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); }
+        .val-yellow { color: var(--accent-yellow); text-shadow: 0 0 10px rgba(253, 224, 71, 0.4); }
+        .val-green { color: var(--accent-green); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+        .val-orange { color: var(--accent-orange); text-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
+
+        .analyzed-section-panel {
+            text-align: center; padding: 30px;
+            background: radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 70%);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .section-subtitle { font-size: 0.85rem; color: var(--accent-cyan); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px; }
+        .section-title { font-size: 3rem; font-weight: 900; color: white; margin: 0; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+
+    </style>
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL ANALYSIS</div>
+        <div class="boot-line"></div>
+    </div>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="calculator-container">
+        <div class="header">
+            <h1>STEEL ANALYSIS</h1>
+            <span class="badge">BENDING</span>
+        </div>
+
+        <div class="form-grid">
+            <div class="left-column-container">
+                <div class="sub-form-group">
+                    <label>Unit System</label>
+                    <select id="unit-toggle" onchange="updateUnits()">
+                        <option value="imperial">Imperial (ksi, in)</option>
+                        <option value="metric">Metric (MPa, mm)</option>
+                    </select>
+                </div>
+
+                <div class="sub-form-group">
+                    <label>W-Shape Section</label>
+                    <select id="w-shape" onchange="autofillProperties()">
+                        <option value="">-- Select a Shape --</option>
+                    </select>
+                </div>
+
+                <div class="sub-form-group">
+                    <label>Design Method</label>
+                    <select id="design-method">
+                        <option value="LRFD">LRFD</option>
+                        <option value="ASD">ASD</option>
+                    </select>
+                </div>
+
+                <div class="sub-form-group">
+                    <label id="sx-label">Section Modulus, Sx (in³)</label>
+                    <input type="number" id="sx" readonly>
+                </div>
+
+                <div class="sub-form-group">
+                    <label id="zx-label">Plastic Modulus, Zx (in³)</label>
+                    <input type="number" id="zx" readonly>
+                </div>
+            </div>
+
+            <div class="right-column-container">
+                <div class="sub-form-group">
+                    <label>Steel Designation</label>
+                    <select id="steel-base" onchange="handleBaseChange()">
+                        <option value="">-- Select Designation --</option>
+                        <option value="Custom">Custom</option>
+                    </select>
+                </div>
+
+                <div class="sub-form-group" id="subgrade-group" style="display: none;">
+                    <label>Specific Grade</label>
+                    <select id="steel-subgrade" onchange="handleSubgradeChange()">
+                        <option value="">-- Select Grade --</option>
+                    </select>
+                </div>
+
+                <div class="sub-form-group">
+                    <label id="fy-label">Yield Strength, Fy (ksi)</label>
+                    <input type="number" id="fy" readonly>
+                </div>
+
+                <div class="sub-form-group">
+                    <label>Lambda Flange (λf)</label>
+                    <input type="number" id="lf" readonly>
+                </div>
+
+                <div class="sub-form-group">
+                    <label>Lambda Web (λw)</label>
+                    <input type="number" id="lw" readonly>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-calculate" onclick="calculateBending()">Analyze Capacity</button>
+
+        <div id="results-area"></div>
+    </div>
+
+    <script>
+        // --- Boot-Up Animation Trigger ---
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const overlay = document.getElementById('boot-overlay');
+            if (overlay) {
+                overlay.classList.add('hide-boot');
+            }
+        }, 1800); // 1.8 second delay before revealing the site
+    });
+        // Full Shape DB untouched
+        const shapeDB = {"W44X408": {"Zx_imp": 2000.0, "Sx_imp": 1730.0, "lf": 3.71, "lw": 31.9}, "W44X368": {"Zx_imp": 1800.0, "Sx_imp": 1560.0, "lf": 4.06, "lw": 35.4}, "W44X335": {"Zx_imp": 1620.0, "Sx_imp": 1410.0, "lf": 4.5, "lw": 38.0}, "W44X290": {"Zx_imp": 1410.0, "Sx_imp": 1240.0, "lf": 5.02, "lw": 45.0}, "W44X262": {"Zx_imp": 1270.0, "Sx_imp": 1110.0, "lf": 5.57, "lw": 49.6}, "W44X230": {"Zx_imp": 1100.0, "Sx_imp": 971.0, "lf": 6.45, "lw": 54.8}, "W40X655": {"Zx_imp": 3080.0, "Sx_imp": 2590.0, "lf": 2.39, "lw": 17.3}, "W40X593": {"Zx_imp": 2760.0, "Sx_imp": 2340.0, "lf": 2.58, "lw": 19.1}, "W40X503": {"Zx_imp": 2320.0, "Sx_imp": 1980.0, "lf": 2.98, "lw": 22.3}, "W40X431": {"Zx_imp": 1960.0, "Sx_imp": 1690.0, "lf": 3.44, "lw": 25.5}, "W40X397": {"Zx_imp": 1800.0, "Sx_imp": 1560.0, "lf": 3.66, "lw": 28.0}, "W40X372": {"Zx_imp": 1680.0, "Sx_imp": 1460.0, "lf": 3.93, "lw": 29.5}, "W40X362": {"Zx_imp": 1640.0, "Sx_imp": 1420.0, "lf": 3.99, "lw": 30.5}, "W40X324": {"Zx_imp": 1460.0, "Sx_imp": 1280.0, "lf": 4.4, "lw": 34.2}, "W40X297": {"Zx_imp": 1330.0, "Sx_imp": 1170.0, "lf": 4.8, "lw": 36.8}, "W40X277": {"Zx_imp": 1250.0, "Sx_imp": 1100.0, "lf": 5.03, "lw": 41.2}, "W40X249": {"Zx_imp": 1120.0, "Sx_imp": 993.0, "lf": 5.55, "lw": 45.6}, "W40X215": {"Zx_imp": 964.0, "Sx_imp": 859.0, "lf": 6.45, "lw": 52.6}, "W40X199": {"Zx_imp": 869.0, "Sx_imp": 770.0, "lf": 7.39, "lw": 52.6}, "W40X392": {"Zx_imp": 1710.0, "Sx_imp": 1440.0, "lf": 2.45, "lw": 24.1}, "W40X331": {"Zx_imp": 1430.0, "Sx_imp": 1210.0, "lf": 2.86, "lw": 28.0}, "W40X327": {"Zx_imp": 1410.0, "Sx_imp": 1200.0, "lf": 2.85, "lw": 29.0}, "W40X294": {"Zx_imp": 1270.0, "Sx_imp": 1080.0, "lf": 3.11, "lw": 32.2}, "W40X278": {"Zx_imp": 1190.0, "Sx_imp": 1020.0, "lf": 3.31, "lw": 33.3}, "W40X264": {"Zx_imp": 1130.0, "Sx_imp": 971.0, "lf": 3.45, "lw": 35.6}, "W40X235": {"Zx_imp": 1010.0, "Sx_imp": 875.0, "lf": 3.77, "lw": 41.2}, "W40X211": {"Zx_imp": 906.0, "Sx_imp": 786.0, "lf": 4.17, "lw": 45.6}, "W40X183": {"Zx_imp": 774.0, "Sx_imp": 675.0, "lf": 4.92, "lw": 52.6}, "W40X167": {"Zx_imp": 693.0, "Sx_imp": 600.0, "lf": 5.76, "lw": 52.6}, "W40X149": {"Zx_imp": 598.0, "Sx_imp": 513.0, "lf": 7.11, "lw": 54.3}, "W36X925": {"Zx_imp": 4130.0, "Sx_imp": 3390.0, "lf": 2.05, "lw": 10.8}, "W36X853": {"Zx_imp": 3920.0, "Sx_imp": 3250.0, "lf": 2.01, "lw": 12.9}, "W36X802": {"Zx_imp": 3660.0, "Sx_imp": 3040.0, "lf": 2.1, "lw": 13.7}, "W36X723": {"Zx_imp": 3270.0, "Sx_imp": 2740.0, "lf": 2.28, "lw": 15.0}, "W36X652": {"Zx_imp": 2910.0, "Sx_imp": 2460.0, "lf": 2.48, "lw": 16.3}, "W36X529": {"Zx_imp": 2330.0, "Sx_imp": 1990.0, "lf": 2.96, "lw": 19.9}, "W36X487": {"Zx_imp": 2130.0, "Sx_imp": 1830.0, "lf": 3.19, "lw": 21.4}, "W36X441": {"Zx_imp": 1910.0, "Sx_imp": 1650.0, "lf": 3.48, "lw": 23.6}, "W36X395": {"Zx_imp": 1710.0, "Sx_imp": 1490.0, "lf": 3.83, "lw": 26.3}, "W36X361": {"Zx_imp": 1550.0, "Sx_imp": 1350.0, "lf": 4.16, "lw": 28.6}, "W36X330": {"Zx_imp": 1410.0, "Sx_imp": 1240.0, "lf": 4.49, "lw": 31.4}, "W36X302": {"Zx_imp": 1280.0, "Sx_imp": 1130.0, "lf": 4.96, "lw": 33.9}, "W36X282": {"Zx_imp": 1190.0, "Sx_imp": 1050.0, "lf": 5.29, "lw": 36.2}, "W36X262": {"Zx_imp": 1100.0, "Sx_imp": 972.0, "lf": 5.75, "lw": 38.2}, "W36X247": {"Zx_imp": 1030.0, "Sx_imp": 913.0, "lf": 6.11, "lw": 40.1}, "W36X231": {"Zx_imp": 963.0, "Sx_imp": 854.0, "lf": 6.54, "lw": 42.2}, "W36X387": {"Zx_imp": 1610.0, "Sx_imp": 1360.0, "lf": 2.48, "lw": 22.9}, "W36X350": {"Zx_imp": 1440.0, "Sx_imp": 1220.0, "lf": 2.72, "lw": 25.0}, "W36X318": {"Zx_imp": 1300.0, "Sx_imp": 1110.0, "lf": 2.91, "lw": 27.5}, "W36X286": {"Zx_imp": 1160.0, "Sx_imp": 1000.0, "lf": 3.19, "lw": 30.6}, "W36X256": {"Zx_imp": 1040.0, "Sx_imp": 895.0, "lf": 3.53, "lw": 33.8}, "W36X232": {"Zx_imp": 936.0, "Sx_imp": 809.0, "lf": 3.86, "lw": 37.3}, "W36X210": {"Zx_imp": 833.0, "Sx_imp": 719.0, "lf": 4.48, "lw": 39.1}, "W36X194": {"Zx_imp": 767.0, "Sx_imp": 664.0, "lf": 4.81, "lw": 42.4}, "W36X182": {"Zx_imp": 718.0, "Sx_imp": 623.0, "lf": 5.12, "lw": 44.8}, "W36X170": {"Zx_imp": 668.0, "Sx_imp": 581.0, "lf": 5.47, "lw": 47.7}, "W36X160": {"Zx_imp": 624.0, "Sx_imp": 542.0, "lf": 5.88, "lw": 49.9}, "W36X150": {"Zx_imp": 581.0, "Sx_imp": 504.0, "lf": 6.37, "lw": 51.9}, "W36X135": {"Zx_imp": 509.0, "Sx_imp": 439.0, "lf": 7.56, "lw": 54.1}, "W33X387": {"Zx_imp": 1560.0, "Sx_imp": 1350.0, "lf": 3.55, "lw": 23.7}, "W33X354": {"Zx_imp": 1420.0, "Sx_imp": 1240.0, "lf": 3.85, "lw": 25.7}, "W33X318": {"Zx_imp": 1270.0, "Sx_imp": 1110.0, "lf": 4.23, "lw": 28.7}, "W33X291": {"Zx_imp": 1160.0, "Sx_imp": 1020.0, "lf": 4.6, "lw": 31.0}, "W33X263": {"Zx_imp": 1040.0, "Sx_imp": 919.0, "lf": 5.03, "lw": 34.3}, "W33X241": {"Zx_imp": 940.0, "Sx_imp": 831.0, "lf": 5.66, "lw": 35.9}, "W33X221": {"Zx_imp": 857.0, "Sx_imp": 759.0, "lf": 6.2, "lw": 38.5}, "W33X201": {"Zx_imp": 773.0, "Sx_imp": 686.0, "lf": 6.85, "lw": 41.7}, "W33X169": {"Zx_imp": 629.0, "Sx_imp": 549.0, "lf": 4.71, "lw": 44.7}, "W33X152": {"Zx_imp": 559.0, "Sx_imp": 487.0, "lf": 5.48, "lw": 47.2}, "W33X141": {"Zx_imp": 514.0, "Sx_imp": 448.0, "lf": 6.01, "lw": 49.6}, "W33X130": {"Zx_imp": 467.0, "Sx_imp": 406.0, "lf": 6.73, "lw": 51.7}, "W33X118": {"Zx_imp": 415.0, "Sx_imp": 359.0, "lf": 7.76, "lw": 54.5}, "W30X391": {"Zx_imp": 1450.0, "Sx_imp": 1250.0, "lf": 3.19, "lw": 19.7}, "W30X357": {"Zx_imp": 1320.0, "Sx_imp": 1140.0, "lf": 3.45, "lw": 21.6}, "W30X326": {"Zx_imp": 1190.0, "Sx_imp": 1040.0, "lf": 3.75, "lw": 23.4}, "W30X292": {"Zx_imp": 1060.0, "Sx_imp": 930.0, "lf": 4.12, "lw": 26.2}, "W30X261": {"Zx_imp": 943.0, "Sx_imp": 829.0, "lf": 4.59, "lw": 28.7}, "W30X235": {"Zx_imp": 847.0, "Sx_imp": 748.0, "lf": 5.02, "lw": 32.2}, "W30X211": {"Zx_imp": 751.0, "Sx_imp": 665.0, "lf": 5.74, "lw": 34.5}, "W30X191": {"Zx_imp": 675.0, "Sx_imp": 600.0, "lf": 6.35, "lw": 37.7}, "W30X173": {"Zx_imp": 607.0, "Sx_imp": 541.0, "lf": 7.04, "lw": 40.8}, "W30X148": {"Zx_imp": 500.0, "Sx_imp": 436.0, "lf": 4.44, "lw": 41.6}, "W30X132": {"Zx_imp": 437.0, "Sx_imp": 380.0, "lf": 5.27, "lw": 43.9}, "W30X124": {"Zx_imp": 408.0, "Sx_imp": 355.0, "lf": 5.65, "lw": 46.2}, "W30X116": {"Zx_imp": 378.0, "Sx_imp": 329.0, "lf": 6.17, "lw": 47.8}, "W30X108": {"Zx_imp": 346.0, "Sx_imp": 299.0, "lf": 6.89, "lw": 49.6}, "W30X99": {"Zx_imp": 312.0, "Sx_imp": 269.0, "lf": 7.8, "lw": 51.9}, "W30X90": {"Zx_imp": 283.0, "Sx_imp": 245.0, "lf": 8.52, "lw": 57.5}, "W27X539": {"Zx_imp": 1890.0, "Sx_imp": 1570.0, "lf": 2.15, "lw": 12.1}, "W27X368": {"Zx_imp": 1240.0, "Sx_imp": 1060.0, "lf": 2.96, "lw": 17.3}, "W27X336": {"Zx_imp": 1130.0, "Sx_imp": 972.0, "lf": 3.19, "lw": 18.9}, "W27X307": {"Zx_imp": 1030.0, "Sx_imp": 887.0, "lf": 3.46, "lw": 20.6}, "W27X281": {"Zx_imp": 936.0, "Sx_imp": 814.0, "lf": 3.72, "lw": 22.5}, "W27X258": {"Zx_imp": 852.0, "Sx_imp": 745.0, "lf": 4.03, "lw": 24.4}, "W27X235": {"Zx_imp": 772.0, "Sx_imp": 677.0, "lf": 4.41, "lw": 26.2}, "W27X217": {"Zx_imp": 711.0, "Sx_imp": 627.0, "lf": 4.71, "lw": 28.7}, "W27X194": {"Zx_imp": 631.0, "Sx_imp": 559.0, "lf": 5.24, "lw": 31.8}, "W27X178": {"Zx_imp": 570.0, "Sx_imp": 505.0, "lf": 5.92, "lw": 32.9}, "W27X161": {"Zx_imp": 515.0, "Sx_imp": 458.0, "lf": 6.49, "lw": 36.1}, "W27X146": {"Zx_imp": 464.0, "Sx_imp": 414.0, "lf": 7.16, "lw": 39.4}, "W27X129": {"Zx_imp": 395.0, "Sx_imp": 345.0, "lf": 4.55, "lw": 39.7}, "W27X114": {"Zx_imp": 343.0, "Sx_imp": 299.0, "lf": 5.41, "lw": 42.5}, "W27X102": {"Zx_imp": 305.0, "Sx_imp": 267.0, "lf": 6.03, "lw": 47.1}, "W27X94": {"Zx_imp": 278.0, "Sx_imp": 243.0, "lf": 6.7, "lw": 49.5}, "W27X84": {"Zx_imp": 244.0, "Sx_imp": 213.0, "lf": 7.78, "lw": 52.7}, "W24X370": {"Zx_imp": 1130.0, "Sx_imp": 957.0, "lf": 2.51, "lw": 14.2}, "W24X335": {"Zx_imp": 1020.0, "Sx_imp": 864.0, "lf": 2.73, "lw": 15.6}, "W24X306": {"Zx_imp": 922.0, "Sx_imp": 789.0, "lf": 2.94, "lw": 17.1}, "W24X279": {"Zx_imp": 835.0, "Sx_imp": 718.0, "lf": 3.18, "lw": 18.6}, "W24X250": {"Zx_imp": 744.0, "Sx_imp": 644.0, "lf": 3.49, "lw": 20.7}, "W24X229": {"Zx_imp": 675.0, "Sx_imp": 588.0, "lf": 3.79, "lw": 22.5}, "W24X207": {"Zx_imp": 606.0, "Sx_imp": 531.0, "lf": 4.14, "lw": 24.8}, "W24X192": {"Zx_imp": 559.0, "Sx_imp": 491.0, "lf": 4.43, "lw": 26.6}, "W24X176": {"Zx_imp": 511.0, "Sx_imp": 450.0, "lf": 4.81, "lw": 28.7}, "W24X162": {"Zx_imp": 468.0, "Sx_imp": 414.0, "lf": 5.31, "lw": 30.6}, "W24X146": {"Zx_imp": 418.0, "Sx_imp": 371.0, "lf": 5.92, "lw": 33.2}, "W24X131": {"Zx_imp": 370.0, "Sx_imp": 329.0, "lf": 6.7, "lw": 35.6}, "W24X117": {"Zx_imp": 327.0, "Sx_imp": 291.0, "lf": 7.53, "lw": 39.2}, "W24X104": {"Zx_imp": 289.0, "Sx_imp": 258.0, "lf": 8.5, "lw": 43.1}, "W24X103": {"Zx_imp": 280.0, "Sx_imp": 245.0, "lf": 4.59, "lw": 39.2}, "W24X94": {"Zx_imp": 254.0, "Sx_imp": 222.0, "lf": 5.18, "lw": 41.9}, "W24X84": {"Zx_imp": 224.0, "Sx_imp": 196.0, "lf": 5.86, "lw": 45.9}, "W24X76": {"Zx_imp": 200.0, "Sx_imp": 176.0, "lf": 6.61, "lw": 49.0}, "W24X68": {"Zx_imp": 177.0, "Sx_imp": 154.0, "lf": 7.66, "lw": 52.0}, "W24X62": {"Zx_imp": 153.0, "Sx_imp": 131.0, "lf": 5.97, "lw": 50.1}, "W24X55": {"Zx_imp": 134.0, "Sx_imp": 114.0, "lf": 6.94, "lw": 54.6}, "W21X275": {"Zx_imp": 749.0, "Sx_imp": 638.0, "lf": 2.95, "lw": 14.2}, "W21X248": {"Zx_imp": 671.0, "Sx_imp": 576.0, "lf": 3.22, "lw": 15.8}, "W21X223": {"Zx_imp": 601.0, "Sx_imp": 520.0, "lf": 3.55, "lw": 17.5}, "W21X201": {"Zx_imp": 530.0, "Sx_imp": 461.0, "lf": 3.86, "lw": 20.6}, "W21X182": {"Zx_imp": 476.0, "Sx_imp": 417.0, "lf": 4.22, "lw": 22.6}, "W21X166": {"Zx_imp": 432.0, "Sx_imp": 380.0, "lf": 4.57, "lw": 25.0}, "W21X147": {"Zx_imp": 373.0, "Sx_imp": 329.0, "lf": 5.44, "lw": 26.1}, "W21X132": {"Zx_imp": 333.0, "Sx_imp": 295.0, "lf": 6.01, "lw": 28.9}, "W21X122": {"Zx_imp": 307.0, "Sx_imp": 273.0, "lf": 6.45, "lw": 31.3}, "W21X111": {"Zx_imp": 279.0, "Sx_imp": 249.0, "lf": 7.05, "lw": 34.1}, "W21X101": {"Zx_imp": 253.0, "Sx_imp": 227.0, "lf": 7.68, "lw": 37.5}, "W21X93": {"Zx_imp": 221.0, "Sx_imp": 192.0, "lf": 4.53, "lw": 32.3}, "W21X83": {"Zx_imp": 196.0, "Sx_imp": 171.0, "lf": 5.0, "lw": 36.4}, "W21X73": {"Zx_imp": 172.0, "Sx_imp": 151.0, "lf": 5.6, "lw": 41.2}, "W21X68": {"Zx_imp": 160.0, "Sx_imp": 140.0, "lf": 6.04, "lw": 43.6}, "W21X62": {"Zx_imp": 144.0, "Sx_imp": 127.0, "lf": 6.7, "lw": 46.9}, "W21X55": {"Zx_imp": 126.0, "Sx_imp": 110.0, "lf": 7.87, "lw": 50.0}, "W21X48": {"Zx_imp": 107.0, "Sx_imp": 93.0, "lf": 9.47, "lw": 53.6}, "W21X57": {"Zx_imp": 129.0, "Sx_imp": 111.0, "lf": 5.04, "lw": 46.3}, "W21X50": {"Zx_imp": 110.0, "Sx_imp": 94.5, "lf": 6.1, "lw": 49.4}, "W21X44": {"Zx_imp": 95.4, "Sx_imp": 81.6, "lf": 7.22, "lw": 53.6}, "W18X311": {"Zx_imp": 754.0, "Sx_imp": 624.0, "lf": 2.19, "lw": 10.4}, "W18X283": {"Zx_imp": 676.0, "Sx_imp": 565.0, "lf": 2.38, "lw": 11.3}, "W18X258": {"Zx_imp": 611.0, "Sx_imp": 514.0, "lf": 2.56, "lw": 12.5}, "W18X234": {"Zx_imp": 549.0, "Sx_imp": 466.0, "lf": 2.76, "lw": 13.8}, "W18X211": {"Zx_imp": 490.0, "Sx_imp": 419.0, "lf": 3.02, "lw": 15.1}, "W18X192": {"Zx_imp": 442.0, "Sx_imp": 380.0, "lf": 3.27, "lw": 16.7}, "W18X175": {"Zx_imp": 398.0, "Sx_imp": 344.0, "lf": 3.58, "lw": 18.0}, "W18X158": {"Zx_imp": 356.0, "Sx_imp": 310.0, "lf": 3.92, "lw": 19.8}, "W18X143": {"Zx_imp": 322.0, "Sx_imp": 282.0, "lf": 4.25, "lw": 22.0}, "W18X130": {"Zx_imp": 290.0, "Sx_imp": 256.0, "lf": 4.65, "lw": 23.9}, "W18X119": {"Zx_imp": 262.0, "Sx_imp": 231.0, "lf": 5.31, "lw": 24.5}, "W18X106": {"Zx_imp": 230.0, "Sx_imp": 204.0, "lf": 5.96, "lw": 27.2}, "W18X97": {"Zx_imp": 211.0, "Sx_imp": 188.0, "lf": 6.41, "lw": 30.0}, "W18X86": {"Zx_imp": 186.0, "Sx_imp": 166.0, "lf": 7.2, "lw": 33.4}, "W18X76": {"Zx_imp": 163.0, "Sx_imp": 146.0, "lf": 8.11, "lw": 37.8}, "W18X71": {"Zx_imp": 146.0, "Sx_imp": 127.0, "lf": 4.71, "lw": 32.4}, "W18X65": {"Zx_imp": 133.0, "Sx_imp": 117.0, "lf": 5.06, "lw": 35.7}, "W18X60": {"Zx_imp": 123.0, "Sx_imp": 108.0, "lf": 5.44, "lw": 38.7}, "W18X55": {"Zx_imp": 112.0, "Sx_imp": 98.3, "lf": 5.98, "lw": 41.1}, "W18X50": {"Zx_imp": 101.0, "Sx_imp": 88.9, "lf": 6.57, "lw": 45.2}, "W18X46": {"Zx_imp": 90.7, "Sx_imp": 78.8, "lf": 5.01, "lw": 44.6}, "W18X40": {"Zx_imp": 78.4, "Sx_imp": 68.4, "lf": 5.73, "lw": 50.9}, "W18X35": {"Zx_imp": 66.5, "Sx_imp": 57.6, "lf": 7.06, "lw": 53.5}, "W16X100": {"Zx_imp": 198.0, "Sx_imp": 175.0, "lf": 5.29, "lw": 24.3}, "W16X89": {"Zx_imp": 175.0, "Sx_imp": 155.0, "lf": 5.92, "lw": 27.0}, "W16X77": {"Zx_imp": 150.0, "Sx_imp": 134.0, "lf": 6.77, "lw": 31.2}, "W16X67": {"Zx_imp": 130.0, "Sx_imp": 117.0, "lf": 7.7, "lw": 35.9}, "W16X57": {"Zx_imp": 105.0, "Sx_imp": 92.2, "lf": 4.98, "lw": 33.0}, "W16X50": {"Zx_imp": 92.0, "Sx_imp": 81.0, "lf": 5.61, "lw": 37.4}, "W16X45": {"Zx_imp": 82.3, "Sx_imp": 72.7, "lf": 6.23, "lw": 41.1}, "W16X40": {"Zx_imp": 73.0, "Sx_imp": 64.7, "lf": 6.93, "lw": 46.5}, "W16X36": {"Zx_imp": 64.0, "Sx_imp": 56.5, "lf": 8.12, "lw": 48.1}, "W16X31": {"Zx_imp": 54.0, "Sx_imp": 47.2, "lf": 6.28, "lw": 51.6}, "W16X26": {"Zx_imp": 44.2, "Sx_imp": 38.4, "lf": 7.97, "lw": 56.8}, "W14X873": {"Zx_imp": 2030.0, "Sx_imp": 1530.0, "lf": 1.71, "lw": 2.89}, "W14X808": {"Zx_imp": 1830.0, "Sx_imp": 1390.0, "lf": 1.82, "lw": 3.04}, "W14X730": {"Zx_imp": 1660.0, "Sx_imp": 1280.0, "lf": 1.82, "lw": 3.71}, "W14X665": {"Zx_imp": 1480.0, "Sx_imp": 1150.0, "lf": 1.95, "lw": 4.03}, "W14X605": {"Zx_imp": 1320.0, "Sx_imp": 1040.0, "lf": 2.09, "lw": 4.39}, "W14X550": {"Zx_imp": 1180.0, "Sx_imp": 931.0, "lf": 2.25, "lw": 4.79}, "W14X500": {"Zx_imp": 1050.0, "Sx_imp": 838.0, "lf": 2.43, "lw": 5.21}, "W14X455": {"Zx_imp": 936.0, "Sx_imp": 756.0, "lf": 2.62, "lw": 5.66}, "W14X426": {"Zx_imp": 869.0, "Sx_imp": 706.0, "lf": 2.75, "lw": 6.08}, "W14X398": {"Zx_imp": 801.0, "Sx_imp": 656.0, "lf": 2.92, "lw": 6.44}, "W14X370": {"Zx_imp": 736.0, "Sx_imp": 607.0, "lf": 3.1, "lw": 6.89}, "W14X342": {"Zx_imp": 672.0, "Sx_imp": 558.0, "lf": 3.31, "lw": 7.41}, "W14X311": {"Zx_imp": 603.0, "Sx_imp": 506.0, "lf": 3.59, "lw": 8.09}, "W14X283": {"Zx_imp": 542.0, "Sx_imp": 459.0, "lf": 3.89, "lw": 8.84}, "W14X257": {"Zx_imp": 487.0, "Sx_imp": 415.0, "lf": 4.23, "lw": 9.71}, "W14X233": {"Zx_imp": 436.0, "Sx_imp": 375.0, "lf": 4.62, "lw": 10.7}, "W14X211": {"Zx_imp": 390.0, "Sx_imp": 338.0, "lf": 5.06, "lw": 11.6}, "W14X193": {"Zx_imp": 355.0, "Sx_imp": 310.0, "lf": 5.45, "lw": 12.8}, "W14X176": {"Zx_imp": 320.0, "Sx_imp": 281.0, "lf": 5.97, "lw": 13.7}, "W14X159": {"Zx_imp": 287.0, "Sx_imp": 254.0, "lf": 6.54, "lw": 15.3}, "W14X145": {"Zx_imp": 260.0, "Sx_imp": 232.0, "lf": 7.11, "lw": 16.8}, "W14X132": {"Zx_imp": 234.0, "Sx_imp": 209.0, "lf": 7.15, "lw": 17.7}, "W14X120": {"Zx_imp": 212.0, "Sx_imp": 190.0, "lf": 7.8, "lw": 19.3}, "W14X109": {"Zx_imp": 192.0, "Sx_imp": 173.0, "lf": 8.49, "lw": 21.7}, "W14X99": {"Zx_imp": 173.0, "Sx_imp": 157.0, "lf": 9.34, "lw": 23.5}, "W14X90": {"Zx_imp": 157.0, "Sx_imp": 143.0, "lf": 10.2, "lw": 25.9}, "W14X82": {"Zx_imp": 139.0, "Sx_imp": 123.0, "lf": 5.92, "lw": 22.4}, "W14X74": {"Zx_imp": 126.0, "Sx_imp": 112.0, "lf": 6.41, "lw": 25.4}, "W14X68": {"Zx_imp": 115.0, "Sx_imp": 103.0, "lf": 6.97, "lw": 27.5}, "W14X61": {"Zx_imp": 102.0, "Sx_imp": 92.1, "lf": 7.75, "lw": 30.4}, "W14X53": {"Zx_imp": 87.1, "Sx_imp": 77.8, "lf": 6.11, "lw": 30.9}, "W14X48": {"Zx_imp": 78.4, "Sx_imp": 70.2, "lf": 6.75, "lw": 33.6}, "W14X43": {"Zx_imp": 69.6, "Sx_imp": 62.6, "lf": 7.54, "lw": 37.4}, "W14X38": {"Zx_imp": 61.5, "Sx_imp": 54.6, "lf": 6.57, "lw": 39.6}, "W14X34": {"Zx_imp": 54.6, "Sx_imp": 48.6, "lf": 7.41, "lw": 43.1}, "W14X30": {"Zx_imp": 47.3, "Sx_imp": 42.0, "lf": 8.74, "lw": 45.4}, "W14X26": {"Zx_imp": 40.2, "Sx_imp": 35.3, "lf": 5.98, "lw": 48.1}, "W14X22": {"Zx_imp": 33.2, "Sx_imp": 29.0, "lf": 7.46, "lw": 53.3}, "W12X336": {"Zx_imp": 603.0, "Sx_imp": 483.0, "lf": 2.26, "lw": 5.47}, "W12X305": {"Zx_imp": 537.0, "Sx_imp": 435.0, "lf": 2.45, "lw": 5.98}, "W12X279": {"Zx_imp": 481.0, "Sx_imp": 393.0, "lf": 2.66, "lw": 6.35}, "W12X252": {"Zx_imp": 428.0, "Sx_imp": 353.0, "lf": 2.89, "lw": 6.96}, "W12X230": {"Zx_imp": 386.0, "Sx_imp": 321.0, "lf": 3.11, "lw": 7.56}, "W12X210": {"Zx_imp": 348.0, "Sx_imp": 292.0, "lf": 3.37, "lw": 8.23}, "W12X190": {"Zx_imp": 311.0, "Sx_imp": 263.0, "lf": 3.65, "lw": 9.16}, "W12X170": {"Zx_imp": 275.0, "Sx_imp": 235.0, "lf": 4.03, "lw": 10.1}, "W12X152": {"Zx_imp": 243.0, "Sx_imp": 209.0, "lf": 4.46, "lw": 11.2}, "W12X136": {"Zx_imp": 214.0, "Sx_imp": 186.0, "lf": 4.96, "lw": 12.3}, "W12X120": {"Zx_imp": 186.0, "Sx_imp": 163.0, "lf": 5.57, "lw": 13.7}, "W12X106": {"Zx_imp": 164.0, "Sx_imp": 145.0, "lf": 6.17, "lw": 15.9}, "W12X96": {"Zx_imp": 147.0, "Sx_imp": 131.0, "lf": 6.76, "lw": 17.7}, "W12X87": {"Zx_imp": 132.0, "Sx_imp": 118.0, "lf": 7.48, "lw": 18.9}, "W12X79": {"Zx_imp": 119.0, "Sx_imp": 107.0, "lf": 8.22, "lw": 20.7}, "W12X72": {"Zx_imp": 108.0, "Sx_imp": 97.4, "lf": 8.99, "lw": 22.6}, "W12X65": {"Zx_imp": 96.8, "Sx_imp": 87.9, "lf": 9.92, "lw": 24.9}, "W12X58": {"Zx_imp": 86.4, "Sx_imp": 78.0, "lf": 7.82, "lw": 27.0}, "W12X53": {"Zx_imp": 77.9, "Sx_imp": 70.6, "lf": 8.69, "lw": 28.1}, "W12X50": {"Zx_imp": 71.9, "Sx_imp": 64.2, "lf": 6.31, "lw": 26.8}, "W12X45": {"Zx_imp": 64.2, "Sx_imp": 57.7, "lf": 7.0, "lw": 29.6}, "W12X40": {"Zx_imp": 57.0, "Sx_imp": 51.5, "lf": 7.77, "lw": 33.6}, "W12X35": {"Zx_imp": 51.2, "Sx_imp": 45.6, "lf": 6.31, "lw": 36.2}, "W12X30": {"Zx_imp": 43.1, "Sx_imp": 38.6, "lf": 7.41, "lw": 41.8}, "W12X26": {"Zx_imp": 37.2, "Sx_imp": 33.4, "lf": 8.54, "lw": 47.2}, "W12X22": {"Zx_imp": 29.3, "Sx_imp": 25.4, "lf": 4.74, "lw": 41.8}, "W12X19": {"Zx_imp": 24.7, "Sx_imp": 21.3, "lf": 5.72, "lw": 46.2}, "W12X16": {"Zx_imp": 20.1, "Sx_imp": 17.1, "lf": 7.53, "lw": 49.4}, "W12X14": {"Zx_imp": 17.4, "Sx_imp": 14.9, "lf": 8.82, "lw": 54.3}, "W10X112": {"Zx_imp": 147.0, "Sx_imp": 126.0, "lf": 4.17, "lw": 10.4}, "W10X100": {"Zx_imp": 130.0, "Sx_imp": 112.0, "lf": 4.62, "lw": 11.6}, "W10X88": {"Zx_imp": 113.0, "Sx_imp": 98.5, "lf": 5.18, "lw": 13.0}, "W10X77": {"Zx_imp": 97.6, "Sx_imp": 85.9, "lf": 5.86, "lw": 14.8}, "W10X68": {"Zx_imp": 85.3, "Sx_imp": 75.7, "lf": 6.58, "lw": 16.7}, "W10X60": {"Zx_imp": 74.6, "Sx_imp": 66.7, "lf": 7.41, "lw": 18.7}, "W10X54": {"Zx_imp": 66.6, "Sx_imp": 60.0, "lf": 8.15, "lw": 21.2}, "W10X49": {"Zx_imp": 60.4, "Sx_imp": 54.6, "lf": 8.93, "lw": 23.1}, "W10X45": {"Zx_imp": 54.9, "Sx_imp": 49.1, "lf": 6.47, "lw": 22.5}, "W10X39": {"Zx_imp": 46.8, "Sx_imp": 42.1, "lf": 7.53, "lw": 25.0}, "W10X33": {"Zx_imp": 38.8, "Sx_imp": 35.0, "lf": 9.15, "lw": 27.1}, "W10X30": {"Zx_imp": 36.6, "Sx_imp": 32.4, "lf": 5.7, "lw": 29.5}, "W10X26": {"Zx_imp": 31.3, "Sx_imp": 27.9, "lf": 6.56, "lw": 34.0}, "W10X22": {"Zx_imp": 26.0, "Sx_imp": 23.2, "lf": 7.99, "lw": 36.9}, "W10X19": {"Zx_imp": 21.6, "Sx_imp": 18.8, "lf": 5.09, "lw": 35.4}, "W10X17": {"Zx_imp": 18.7, "Sx_imp": 16.2, "lf": 6.08, "lw": 36.9}, "W10X15": {"Zx_imp": 16.0, "Sx_imp": 13.8, "lf": 7.41, "lw": 38.5}, "W10X12": {"Zx_imp": 12.6, "Sx_imp": 10.9, "lf": 9.43, "lw": 46.6}, "W8X67": {"Zx_imp": 70.1, "Sx_imp": 60.4, "lf": 4.43, "lw": 11.1}, "W8X58": {"Zx_imp": 59.8, "Sx_imp": 52.0, "lf": 5.07, "lw": 12.4}, "W8X48": {"Zx_imp": 49.0, "Sx_imp": 43.2, "lf": 5.92, "lw": 15.9}, "W8X40": {"Zx_imp": 39.8, "Sx_imp": 35.5, "lf": 7.21, "lw": 17.6}, "W8X35": {"Zx_imp": 34.7, "Sx_imp": 31.2, "lf": 8.1, "lw": 20.5}, "W8X31": {"Zx_imp": 30.4, "Sx_imp": 27.5, "lf": 9.19, "lw": 22.3}, "W8X28": {"Zx_imp": 27.2, "Sx_imp": 24.3, "lf": 7.03, "lw": 22.3}, "W8X24": {"Zx_imp": 23.1, "Sx_imp": 20.9, "lf": 8.12, "lw": 25.9}, "W8X21": {"Zx_imp": 20.4, "Sx_imp": 18.2, "lf": 6.59, "lw": 27.5}, "W8X18": {"Zx_imp": 17.0, "Sx_imp": 15.2, "lf": 7.95, "lw": 29.9}, "W8X15": {"Zx_imp": 13.6, "Sx_imp": 11.8, "lf": 6.37, "lw": 28.1}, "W8X13": {"Zx_imp": 11.4, "Sx_imp": 9.91, "lf": 7.84, "lw": 29.9}, "W8X10": {"Zx_imp": 8.87, "Sx_imp": 7.81, "lf": 9.61, "lw": 40.5}, "W6X25": {"Zx_imp": 18.9, "Sx_imp": 16.7, "lf": 6.68, "lw": 15.5}, "W6X20": {"Zx_imp": 14.9, "Sx_imp": 13.4, "lf": 8.25, "lw": 19.1}, "W6X15": {"Zx_imp": 10.8, "Sx_imp": 9.72, "lf": 11.5, "lw": 21.6}, "W6X16": {"Zx_imp": 11.7, "Sx_imp": 10.2, "lf": 4.98, "lw": 19.1}, "W6X12": {"Zx_imp": 8.3, "Sx_imp": 7.31, "lf": 7.14, "lw": 21.6}, "W6X9": {"Zx_imp": 6.23, "Sx_imp": 5.56, "lf": 9.16, "lw": 29.2}, "W6X8.5": {"Zx_imp": 5.73, "Sx_imp": 5.1, "lf": 10.1, "lw": 29.1}, "W5X19": {"Zx_imp": 11.6, "Sx_imp": 10.2, "lf": 5.85, "lw": 13.7}, "W5X16": {"Zx_imp": 9.63, "Sx_imp": 8.55, "lf": 6.94, "lw": 15.4}, "W4X13": {"Zx_imp": 6.28, "Sx_imp": 5.46, "lf": 5.88, "lw": 10.6}};
+
+        // Nested Data Structure for Cascading Selection
+        const gradeDB = {
+            "A36": { "default": { imperial: 36, metric: 250 } },
+            "A53": { "Gr. B": { imperial: 35, metric: 240 } },
+            "A500": { "Gr. B": { imperial: 42, metric: 290 }, "Gr. C": { imperial: 46, metric: 315 } },
+            "A501": { "Gr. A": { imperial: 36, metric: 250 }, "Gr. B": { imperial: 50, metric: 345 } },
+            "A529": { "Gr. 50": { imperial: 50, metric: 345 }, "Gr. 55": { imperial: 55, metric: 380 } },
+            "A572": { 
+                "Gr. 42": { imperial: 42, metric: 290 }, 
+                "Gr. 50": { imperial: 50, metric: 345 }, 
+                "Gr. 55": { imperial: 55, metric: 380 }, 
+                "Gr. 60": { imperial: 60, metric: 415 }, 
+                "Gr. 65": { imperial: 65, metric: 450 } 
+            },
+            "A588": { "default": { imperial: 50, metric: 345 } },
+            "A618": { "Gr. Ia, Ib, & II": { imperial: 50, metric: 345 }, "Gr. III": { imperial: 50, metric: 345 } },
+            "A709": { "36": { imperial: 36, metric: 250 }, "50": { imperial: 50, metric: 345 }, "50S": { imperial: 50, metric: 345 }, "50W": { imperial: 50, metric: 345 } },
+            "A847": { "default": { imperial: 50, metric: 345 } },
+            "A913": { "50": { imperial: 50, metric: 345 }, "60": { imperial: 60, metric: 415 }, "70": { imperial: 65, metric: 450 } },
+            "A992": { "default": { imperial: 50, metric: 345 } },
+            "A1043": { "36": { imperial: 36, metric: 250 }, "50": { imperial: 50, metric: 345 } },
+            "A1065": { "Gr. 50": { imperial: 50, metric: 345 }, "Gr. 50W": { imperial: 50, metric: 345 } },
+            "A1085": { "Gr. A": { imperial: 50, metric: 345 } }
+        };
+
+        window.onload = function() {
+            // Populate W-Shapes
+            const selectElement = document.getElementById('w-shape');
+            const shapes = Object.keys(shapeDB);
+            shapes.forEach(shape => {
+                const option = document.createElement('option');
+                option.value = shape;
+                option.textContent = shape;
+                selectElement.appendChild(option);
+            });
+
+            // Populate Steel Primary Designations
+            const baseSelect = document.getElementById('steel-base');
+            const customOption = baseSelect.querySelector('option[value="Custom"]'); 
+            const bases = Object.keys(gradeDB);
+            bases.forEach(base => {
+                const option = document.createElement('option');
+                option.value = base;
+                option.textContent = base;
+                baseSelect.insertBefore(option, customOption); 
+            });
+        };
+
+        function handleBaseChange() {
+            const base = document.getElementById('steel-base').value;
+            const subgradeGroup = document.getElementById('subgrade-group');
+            const subgradeSelect = document.getElementById('steel-subgrade');
+            const fyInput = document.getElementById('fy');
+            const unit = document.getElementById('unit-toggle').value;
+
+            // Reset subgrade options
+            subgradeSelect.innerHTML = '<option value="">-- Select Grade --</option>';
+
+            if (base === "Custom") {
+                // If custom, hide subgrades and unlock Fy
+                subgradeGroup.style.display = "none";
+                unlockFyInput(fyInput);
+                fyInput.value = "";
+            } else if (base === "") {
+                // If nothing is selected
+                subgradeGroup.style.display = "none";
+                lockFyInput(fyInput);
+                fyInput.value = "";
+            } else {
+                // Get subgrades for selected designation
+                const subgrades = Object.keys(gradeDB[base]);
+
+                if (subgrades.length === 1 && subgrades[0] === "default") {
+                    // It has no sub-grades (like A36 or A992), hide secondary dropdown and auto-fill
+                    subgradeGroup.style.display = "none";
+                    lockFyInput(fyInput);
+                    fyInput.value = gradeDB[base]["default"][unit];
+                } else {
+                    // It has multiple grades (like A572), show secondary dropdown
+                    subgradeGroup.style.display = "flex";
+                    lockFyInput(fyInput);
+                    fyInput.value = ""; // Clear until they pick a subgrade
+
+                    subgrades.forEach(grade => {
+                        const option = document.createElement('option');
+                        option.value = grade;
+                        option.textContent = grade;
+                        subgradeSelect.appendChild(option);
+                    });
+                }
+            }
+        }
+
+        function handleSubgradeChange() {
+            const base = document.getElementById('steel-base').value;
+            const subgrade = document.getElementById('steel-subgrade').value;
+            const unit = document.getElementById('unit-toggle').value;
+            const fyInput = document.getElementById('fy');
+
+            if (subgrade !== "") {
+                lockFyInput(fyInput);
+                fyInput.value = gradeDB[base][subgrade][unit];
+            } else {
+                fyInput.value = "";
+            }
+        }
+
+        // Updated styles to match glass theme
+        function unlockFyInput(input) {
+            input.readOnly = false;
+            input.style.backgroundColor = "var(--glass-input)";
+            input.style.border = "1px solid var(--accent-cyan)";
+            input.style.boxShadow = "0 0 0 3px rgba(34, 211, 238, 0.15)";
+        }
+        function lockFyInput(input) {
+            input.readOnly = true;
+            input.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
+            input.style.border = "1px solid rgba(255,255,255,0.03)";
+            input.style.boxShadow = "none";
+        }
+
+        function updateUnits() {
+            const unit = document.getElementById('unit-toggle').value;
+            const fyInput = document.getElementById('fy');
+            const base = document.getElementById('steel-base').value;
+            const subgrade = document.getElementById('steel-subgrade').value;
+
+            if (unit === 'imperial') {
+                document.getElementById('fy-label').innerText = "Yield Strength, Fy (ksi)";
+                document.getElementById('sx-label').innerText = "Section Modulus, Sx (in³)";
+                document.getElementById('zx-label').innerText = "Plastic Modulus, Zx (in³)";
+            } else {
+                document.getElementById('fy-label').innerText = "Yield Strength, Fy (MPa)";
+                document.getElementById('sx-label').innerText = "Section Modulus, Sx (mm³)";
+                document.getElementById('zx-label').innerText = "Plastic Modulus, Zx (mm³)";
+            }
+
+            if (base === "Custom") {
+                let currentFy = parseFloat(fyInput.value);
+                if (currentFy) {
+                    if (unit === 'metric') { fyInput.value = (currentFy * 6.89476).toFixed(0); }
+                    else { fyInput.value = (currentFy / 6.89476).toFixed(2); }
+                }
+            } else if (base !== "") {
+                // Determine which database value to pull
+                if (gradeDB[base]["default"]) {
+                    fyInput.value = gradeDB[base]["default"][unit];
+                } else if (subgrade !== "") {
+                    fyInput.value = gradeDB[base][subgrade][unit];
+                }
+            }
+            autofillProperties(); 
+        }
+
+        function autofillProperties() {
+            const shape = document.getElementById('w-shape').value;
+            const unit = document.getElementById('unit-toggle').value;
+            if (!shape) {
+                document.getElementById('zx').value = ''; document.getElementById('sx').value = '';
+                document.getElementById('lf').value = ''; document.getElementById('lw').value = '';
+                return;
+            }
+            let data = shapeDB[shape];
+            let Zx = data.Zx_imp; let Sx = data.Sx_imp;
+            if (unit === 'metric') {
+                Zx = Zx * Math.pow(25.4, 3); Sx = Sx * Math.pow(25.4, 3);
+            }
+            document.getElementById('zx').value = Zx.toFixed(2);
+            document.getElementById('sx').value = Sx.toFixed(2);
+            document.getElementById('lf').value = data.lf;
+            document.getElementById('lw').value = data.lw;
+        }
+
+        function calculateBending() {
+            const unit = document.getElementById('unit-toggle').value;
+            const Fy = parseFloat(document.getElementById('fy').value);
+            const Sx = parseFloat(document.getElementById('sx').value);
+            const Zx = parseFloat(document.getElementById('zx').value);
+            const lf = parseFloat(document.getElementById('lf').value);
+            const lw = parseFloat(document.getElementById('lw').value);
+            const method = document.getElementById('design-method').value;
+            const shape = document.getElementById('w-shape').value;
+
+            if (!Fy || !Sx || !Zx || !lf || !lw) {
+                alert("Please fill out all inputs or select a shape."); return;
+            }
+
+            const E = (unit === 'imperial') ? 29000 : 200000;
+            const lambda_compact = 0.38 * Math.sqrt(E / Fy);
+            const lambda_noncompact = 1.0 * Math.sqrt(E / Fy);
+
+            let classification = (lf <= lambda_compact) ? "Compact" : (lf <= lambda_noncompact) ? "Noncompact" : "Slender";
+
+            let Mn = 0;
+            if (classification === "Compact") { Mn = Fy * Zx; }
+            else if (classification === "Noncompact") {
+                const Mp = Fy * Zx; const Mr = 0.7 * Fy * Sx;
+                Mn = Mp - (Mp - Mr) * ((lf - lambda_compact) / (lambda_noncompact - lambda_compact));
+            } else { Mn = (0.9 * E * (4 / Math.sqrt(lw)) * Sx) / Math.pow(lf, 2); }
+
+            let displayMn = (unit === 'imperial') ? Mn / 12 : Mn / 1000000;
+            let unitLabel = (unit === 'imperial') ? "kip-ft" : "kN-m";
+            
+            let finalValue = (method === "LRFD") ? (0.9 * displayMn).toFixed(2) : (displayMn / 1.67).toFixed(2);
+            let finalMethodTitle = (method === "LRFD") ? "Design Moment (Mu = 0.9 * Mn)" : "Allowable Moment (Ma = Mn / 1.67)";
+
+            const resultsArea = document.getElementById('results-area');
+            resultsArea.style.display = 'block';
+            
+            // Re-formatted to use the Glass Card Design
+            resultsArea.innerHTML = `
+                <div class="results-panel">
+                    <div class="result-card">
+                        <div class="summary-header">Analysis Summary</div>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <span class="summary-label">λ compact limit</span>
+                                <span class="summary-value val-cyan">${lambda_compact.toFixed(2)}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">λ noncompact limit</span>
+                                <span class="summary-value val-yellow">${lambda_noncompact.toFixed(2)}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Classification</span>
+                                <span class="summary-value val-orange">${classification}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Nominal Moment (Mn)</span>
+                                <span class="summary-value">${displayMn.toFixed(2)} <span style="font-size:0.8rem; font-weight:normal; color:var(--text-label);">${unitLabel}</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analyzed-section-panel">
+                        <div class="section-subtitle">${finalMethodTitle}</div>
+                        <div class="section-title val-green">${finalValue} <span style="font-size:1.5rem; color:white;">${unitLabel}</span></div>
+                    </div>
+                </div>
+            `;
+            
+            resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    </script>
+</body>
+</html>

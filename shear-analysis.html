@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Analysis - Shear Strength</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* --- Boot-Up Animation Styles --- */
+        #boot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-page);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+
+        .boot-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .boot-line {
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            animation: load-line 1.8s ease-in-out forwards;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.6)); transform: scale(1.02); }
+        }
+
+        @keyframes load-line {
+            0% { width: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 300px; opacity: 1; }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        @media print {
+            #boot-overlay { display: none !important; }
+        }
+        /* --- End Boot-Up Animation Styles --- */
+
+        /* --- Back Button Styles --- */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: #3b82f6;
+            transform: translateX(-3px);
+        }
+
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15);
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12);
+        }
+
+        /* Main Glass Container */
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 1050px;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 25px;
+            align-items: start;
+        }
+
+        .form-group, .sub-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .left-column-container, .right-column-container {
+            display: flex; flex-direction: column; gap: 18px;
+        }
+
+        .input-wrapper {
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        label {
+            font-size: 0.85rem; color: var(--text-label); font-weight: 500;
+        }
+
+        /* Glass Inputs */
+        input, select {
+            background-color: var(--glass-input);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input.value-input { width: 100px; text-align: center; }
+
+        input[readonly], select:disabled {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px top 50%;
+            background-size: 10px auto;
+            padding-right: 35px;
+        }
+
+        select option { background-color: #111827; color: white; }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        .unit-label { color: var(--text-label); font-size: 0.95rem; }
+
+        /* Glass Panels */
+        .segments-section, .total-length-container, .segment-row {
+            background: var(--glass-panel);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .segments-section {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .segments-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;
+        }
+
+        .segments-header h3 { margin: 0; font-size: 1.15rem; color: var(--accent-cyan); }
+
+        .total-length-container {
+            display: flex; align-items: flex-start; flex-direction: column; gap: 15px; margin-bottom: 20px;
+            padding: 18px; border: 1px solid rgba(249, 115, 22, 0.3);
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.05), transparent);
+        }
+
+        /* Glassmorphism Buttons */
+        .btn-add-segment {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            color: white;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .btn-add-segment:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+
+        .segments-input-area { display: flex; flex-direction: column; gap: 10px; }
+        .segment-row { display: flex; gap: 10px; align-items: center; padding: 12px; }
+        .segment-row input.brace-elev { width: 130px; }
+        .segment-row select.k-factor-dropdown { flex-grow: 1; }
+        .segment-row select.axis-dropdown { width: 120px; }
+
+        .btn-remove {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-remove:hover { background: var(--danger-red); color: white; box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
+
+        .btn-calculate {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+        }
+        .btn-calculate:hover {
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5);
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-print {
+            background: transparent;
+            color: var(--text-label);
+            border: 1px solid var(--glass-border);
+            padding: 12px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; width: 100%; margin-top: 15px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .btn-print:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
+
+        /* ADVANCED RESULTS PANEL (Glass Cards) */
+        .results-panel {
+            margin-top: 35px;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .summary-header {
+            font-size: 1.25rem; font-weight: bold; color: #ffffff; margin-bottom: 20px;
+            display: inline-block; border-bottom: 2px solid var(--accent-cyan); padding-bottom: 5px;
+        }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .summary-item { display: flex; flex-direction: column; gap: 6px; }
+        .summary-label { font-size: 0.8rem; color: var(--text-label); text-transform: uppercase; letter-spacing: 1px;}
+        .summary-value { font-size: 1.3rem; font-weight: bold; color: white; }
+
+        /* Neon Accents */
+        .val-cyan { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); }
+        .val-yellow { color: var(--accent-yellow); text-shadow: 0 0 10px rgba(253, 224, 71, 0.4); }
+        .val-green { color: var(--accent-green); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+        .val-orange { color: var(--accent-orange); text-shadow: 0 0 10px rgba(249, 115, 22, 0.4); }
+
+        .k-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.95rem; color: var(--text-main); }
+        .k-table th { text-align: left; padding: 15px 10px; color: var(--text-label); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; border-bottom: 1px solid var(--glass-border); }
+        .k-table td { padding: 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .k-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .analyzed-section-panel {
+            text-align: center; padding: 40px;
+            background: radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 70%);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+        }
+
+        .section-subtitle { font-size: 0.85rem; color: var(--accent-cyan); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px; }
+        .section-title { font-size: 4rem; font-weight: 900; color: white; margin: 0; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .section-props { font-size: 1rem; color: var(--text-label); margin: 20px 0 35px 0; }
+
+        .section-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 450px; margin: 0 auto; }
+        .stat-item { display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-val { font-size: 1.8rem; font-weight: bold; }
+
+        /* Shear-specific styling within the new theme */
+        .shear-inputs-panel {
+            background: var(--glass-panel);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .shear-inputs-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;
+        }
+
+        .shear-inputs-header h3 { margin: 0; font-size: 1.15rem; color: var(--accent-cyan); }
+
+        .small-props {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 0.4rem;
+            padding-left: 0.2rem;
+            min-height: 1.2em;
+        }
+
+        .stiffener-group {
+            display: none;
+            flex-direction: column;
+            margin-top: 0.75rem;
+            margin-left: 1rem;
+            border-left: 2px solid rgba(255,255,255,0.1);
+            padding-left: 1rem;
+        }
+
+        .stiffener-group label {
+            font-size: 0.75rem;
+            color: var(--text-label);
+        }
+
+        .stiffener-group input {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            width: 100%;
+        }
+
+        .solution-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .solution-box span.highlight {
+            color: var(--accent-orange);
+            font-weight: 600;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-calc {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 180px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+        }
+        .btn-calc:hover {
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5);
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-reset {
+            background: transparent;
+            color: var(--text-label);
+            border: 1px solid var(--glass-border);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 180px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .btn-reset:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 180px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+            text-transform: uppercase;
+            display: none;
+        }
+        .btn-pdf:hover {
+            box-shadow: 0 12px 25px rgba(249, 115, 22, 0.5);
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        #pdf-template {
+            display: none;
+            background: #ffffff;
+            color: #000000;
+            padding: 40px;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            line-height: 1.6;
+            width: 800px;
+            margin: 0 auto;
+        }
+
+        #pdf-template .pdf-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #000;
+        }
+
+        #pdf-template .pdf-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000;
+            text-transform: uppercase;
+        }
+
+        #pdf-template .pdf-badge {
+            display: inline-block;
+            background-color: #f97316;
+            color: #ffffff !important;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+            font-size: 14px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        #pdf-template .pdf-row {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        #pdf-template .pdf-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 260px;
+        }
+
+        #pdf-template .pdf-value {
+            display: inline-block;
+        }
+
+        #pdf-template .pdf-section-title {
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        /* Print styles for the main UI */
+        @media print {
+            body { background-color: white; background-image: none; color: black; padding: 0; margin: 0; display: block; }
+            .bg-blob, .calculator-container { display: none !important; }
+            #pdf-template { display: block; width: 100%; font-family: 'Times New Roman', Times, serif; }
+            .pdf-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            .pdf-header h1 { margin: 0; font-size: 24pt; letter-spacing: 2px; }
+            .pdf-header h2 { margin: 5px 0 0 0; font-size: 14pt; color: #333; font-weight: normal; }
+        }
+    </style>
+
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL ANALYSIS</div>
+        <div class="boot-line"></div>
+    </div>
+    <a href="index.html" class="back-btn">&#8592; Back to Home</a>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="calculator-container">
+        <div class="header">
+            <h1>STEEL ANALYSIS</h1>
+            <span class="badge">SHEAR</span>
+        </div>
+
+        <div class="shear-inputs-panel">
+            <div class="shear-inputs-header">
+                <h3>Member Properties & Material</h3>
+            </div>
+            <div class="form-grid">
+                <div class="left-column-container">
+                    <div class="sub-form-group">
+                        <label for="wSection">W-Section</label>
+                        <select id="wSection">
+                            <option value="" disabled selected>Select a section</option>
+                        </select>
+                        <div id="sectionPropsDisplay" class="small-props"></div>
+                    </div>
+                    <div class="sub-form-group">
+                        <label for="webCondition">Web Condition</label>
+                        <select id="webCondition">
+                            <option value="unstiffened">Unstiffened Web</option>
+                            <option value="stiffened">Stiffened Web</option>
+                        </select>
+                        <div id="stiffenerGroup" class="stiffener-group">
+                            <label for="stiffenerDist">Clear Distance (a) in.</label>
+                            <input type="number" id="stiffenerDist" step="any" placeholder="Enter 'a' value">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-column-container">
+                    <div class="sub-form-group">
+                        <label for="steelDesig">Steel Designation</label>
+                        <select id="steelDesig">
+                            <option value="" disabled selected>Select steel type</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="sub-form-group">
+                        <label for="steelGrade">Steel Grade</label>
+                        <select id="steelGrade" disabled>
+                            <option value="">N/A</option>
+                        </select>
+                    </div>
+                    <div class="sub-form-group">
+                        <label for="fyInput">Yield Strength, Fy (ksi)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="fyInput" step="any" placeholder="Auto-filled or Custom" disabled style="width: 100%;">
+                            <span class="unit-label">ksi</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-calc" onclick="calculateShear()">Calculate</button>
+            <button class="btn-reset" onclick="resetForm()">Reset</button>
+            <button class="btn-pdf" id="btnPdf" onclick="generatePDF()">Save PDF</button>
+        </div>
+
+        <div class="results-panel" id="resultsPanel">
+            <div class="result-card">
+                <div class="summary-header">Solution Steps</div>
+                <div class="solution-box" id="solutionBox"></div>
+            </div>
+
+            <div class="result-card analyzed-section-panel">
+                <div class="section-subtitle">ANALYSIS RESULTS</div>
+                <div class="section-title" id="resSectionName">--</div>
+                <div class="section-props" id="resSectionProps">Select section to view properties</div>
+
+                <div class="section-stats-grid">
+                    <div class="stat-item">
+                        <span class="summary-label">Nominal Shear (Vn)</span>
+                        <span class="stat-val val-cyan" id="resVn">0 kips</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="summary-label">LRFD Strength (Vu)</span>
+                        <span class="stat-val val-green" id="resVu">0 kips</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="summary-label">ASD Strength (Va)</span>
+                        <span class="stat-val val-yellow" id="resVa">0 kips</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="summary-label">Web Slenderness</span>
+                        <span class="stat-val val-orange" id="resLambda">--</span>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; font-size: 0.85rem; color: var(--text-label);">
+                    <span id="labelVu">&Phi;v = --</span> &nbsp;|&nbsp; <span id="labelVa">&Omega;v = --</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pdf-template">
+        <div class="pdf-header">
+            <div class="pdf-title">STEEL ANALYSIS</div>
+            <div class="pdf-badge">SHEAR STRENGTH OF STRUCTURAL MEMBERS</div>
+        </div>
+
+        <div class="pdf-section-title">INITIAL INPUTS</div>
+        <div class="pdf-row"><span class="pdf-label">Steel Section:</span><span class="pdf-value" id="pdfSection"></span></div>
+        <div class="pdf-row"><span class="pdf-label">Steel Designation:</span><span class="pdf-value" id="pdfSteel"></span></div>
+        <div class="pdf-row"><span class="pdf-label">Steel Grade:</span><span class="pdf-value" id="pdfGrade"></span></div>
+        <div class="pdf-row"><span class="pdf-label">Yield Strength (Fy):</span><span class="pdf-value" id="pdfFy"></span></div>
+        <div class="pdf-row"><span class="pdf-label">Web Condition:</span><span class="pdf-value" id="pdfWeb"></span></div>
+        <div class="pdf-row" id="pdfStiffenerRow"><span class="pdf-label">Clear Distance (a):</span><span class="pdf-value" id="pdfA"></span></div>
+
+        <div class="pdf-section-title">SECTION PROPERTIES</div>
+        <div class="pdf-row"><span class="pdf-label">Depth (d):</span><span class="pdf-value" id="pdfD"></span></div>
+        <div class="pdf-row"><span class="pdf-label">Web Thickness (tw):</span><span class="pdf-value" id="pdfTw"></span></div>
+        <div class="pdf-row"><span class="pdf-label">Web Slenderness (h/tw):</span><span class="pdf-value" id="pdfLambda"></span></div>
+
+        <div class="pdf-section-title">FINAL RESULTS</div>
+        <div class="pdf-row"><span class="pdf-label">Nominal Shear Strength (Vn):</span><span class="pdf-value" id="pdfVn"></span></div>
+        <div class="pdf-row"><span class="pdf-label">LRFD Design Strength (Vu):</span><span class="pdf-value" id="pdfVu"></span></div>
+        <div class="pdf-row"><span class="pdf-label">ASD Allowable Strength (Va):</span><span class="pdf-value" id="pdfVa"></span></div>
+    </div>
+
+    <script>
+        // --- Boot-Up Animation Trigger ---
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const overlay = document.getElementById('boot-overlay');
+                if (overlay) {
+                    overlay.classList.add('hide-boot');
+                }
+            }, 1800);
+        });
+
+        // PASTE DATABASES HERE
+        const rawWSectionCSV = `
+Section_Name,d,tw,lambda_w
+W44X335,44,1.03,38,,
+W44X290,43.6,0.865,45,,
+W44X262,43.3,0.785,49.6,,
+W44X230,42.9,0.71,54.8,,
+W40X655,43.6,1.97,17.3,,
+W40X593,43,1.79,19.1,,
+W40X503,42.1,1.54,22.3,,
+W40X431,41.3,1.34,25.5,,
+W40X397,41,1.22,28,,
+W40X372,40.6,1.16,29.5,,
+W40X362,40.6,1.12,30.5,,
+W40X324,40.2,1,34.2,,
+W40X297,39.8,0.93,36.8,,
+W40X277,39.7,0.83,41.2,,
+W40X249,39.4,0.75,45.6,,
+W40X215,39,0.65,52.6,,
+W40X199,38.7,0.65,52.6,,
+W40X392,41.6,1.42,24.1,,
+W40X331,40.8,1.22,28,,
+W40X327,40.8,1.18,29,,
+W40X294,40.4,1.06,32.2,,
+W40X278,40.2,1.03,33.3,,
+W40X264,40,0.96,35.6,,
+W40X235,39.7,0.83,41.2,,
+W40X211,39.4,0.75,45.6,,
+W40X183,39,0.65,52.6,,
+W40X167,38.6,0.65,52.6,,
+W40X149,38.2,0.63,54.3,,
+W36X925,43.1,3.02,10.8,,
+W36X853,43.1,2.52,12.9,,
+W36X802,42.6,2.38,13.7,,
+W36X723,41.8,2.17,15,,
+W36X652,41.1,1.97,16.3,,
+W36X529,39.8,1.61,19.9,,
+W36X487,39.3,1.5,21.4,,
+W36X441,38.9,1.36,23.6,,
+W36X395,38.4,1.22,26.3,,
+W36X361,38,1.12,28.6,,
+W36X330,37.7,1.02,31.4,,
+W36X302,37.3,0.945,33.9,,
+W36X282,37.1,0.885,36.2,,
+W36X262,36.9,0.84,38.2,,
+W36X247,36.7,0.8,40.1,,
+W36X231,36.5,0.76,42.2,,
+W36X256,37.4,0.96,33.8,,
+W36X232,37.1,0.87,37.3,,
+W36X210,36.7,0.83,39.1,,
+W36X194,36.5,0.765,42.4,,
+W36X182,36.3,0.725,44.8,,
+W36X170,36.2,0.68,47.7,,
+W36X160,36,0.65,49.9,,
+W36X150,35.9,0.625,51.9,,
+W36X135,35.6,0.6,54.1,,
+W33X387,36,1.26,23.7,,
+W33X354,35.6,1.16,25.7,,
+W33X318,35.2,1.04,28.7,,
+W33X291,34.8,0.96,31,,
+W33X263,34.5,0.87,34.3,,
+W33X241,34.2,0.83,35.9,,
+W33X221,33.9,0.775,38.5,,
+W33X201,33.7,0.715,41.7,,
+W33X169,33.8,0.67,44.7,,
+W33X152,33.5,0.635,47.2,,
+W33X141,33.3,0.605,49.6,,
+W33X130,33.1,0.58,51.7,,
+W33X118,32.9,0.55,54.5,,
+W30X391,33.2,1.36,19.7,,
+W30X357,32.8,1.24,21.6,,
+W30X326,32.4,1.14,23.4,,
+W30X292,32,1.02,26.2,,
+W30X261,31.6,0.93,28.7,,
+W30X235,31.3,0.83,32.2,,
+W30X211,30.9,0.775,34.5,,
+W30X191,30.7,0.71,37.7,,
+W30X173,30.4,0.655,40.8,,
+W30X148,30.7,0.65,41.6,,
+W30X132,30.3,0.615,43.9,,
+W30X124,30.2,0.585,46.2,,
+W30X116,30,0.565,47.8,,
+W30X108,29.8,0.545,49.6,,
+W30X99,29.7,0.52,51.9,,
+W30X90,29.5,0.47,57.5,,
+W27X539,32.5,1.97,12.1,,
+W27X368,30.4,1.38,17.3,,
+W27X336,30,1.26,18.9,,
+W27X307,29.6,1.16,20.6,,
+W27X281,29.3,1.06,22.5,,
+W27X258,29,0.98,24.4,,
+W27X235,28.7,0.91,26.2,,
+W27X217,28.4,0.83,28.7,,
+W27X194,28.1,0.75,31.8,,
+W27X178,27.8,0.725,32.9,,
+W27X161,27.6,0.66,36.1,,
+W27X146,27.4,0.605,39.4,,
+W27X129,27.6,0.61,39.7,,
+W27X114,27.3,0.57,42.5,,
+W27X102,27.1,0.515,47.1,,
+W27X94,26.9,0.49,49.5,,
+W27X84,26.7,0.46,52.7,,
+W24X370,28,1.52,14.2,,
+W24X335,27.5,1.38,15.6,,
+W24X306,27.1,1.26,17.1,,
+W24X279,26.7,1.16,18.6,,
+W24X250,26.3,1.04,20.7,,
+W24X229,26,0.96,22.5,,
+W24X207,25.7,0.87,24.8,,
+W24X192,25.5,0.81,26.6,,
+W24X176,25.2,0.75,28.7,,
+W24X162,25,0.705,30.6,,
+W24X146,24.7,0.65,33.2,,
+W24X131,24.5,0.605,35.6,,
+W24X117,24.3,0.55,39.2,,
+W24X104,24.1,0.5,43.1,,
+W24X103,24.5,0.55,39.2,,
+W24X94,24.3,0.515,41.9,,
+W24X84,24.1,0.47,45.9,,
+W24X76,23.9,0.44,49,,
+W24X68,23.7,0.415,52,,
+W24X62,23.7,0.43,50.1,,
+W24X55,23.6,0.395,54.6,,
+W21X275,24.1,1.22,14.2,,
+W21X248,23.7,1.1,15.8,,
+W21X223,23.4,1,17.5,,
+W21X201,23,0.91,20.6,,
+W21X182,22.7,0.83,22.6,,
+W21X166,22.5,0.75,25,,
+W21X147,22.1,0.72,26.1,,
+W21X132,21.8,0.65,28.9,,
+W21X122,21.7,0.6,31.3,,
+W21X111,21.5,0.55,34.1,,
+W21X101,21.4,0.5,37.5,,
+W21X93,21.6,0.58,32.3,,
+W21X83,21.4,0.515,36.4,,
+W21X73,21.2,0.455,41.2,,
+W21X68,21.1,0.43,43.6,,
+W21X62,21,0.4,46.9,,
+W21X55,20.8,0.375,50,,
+W21X48,20.6,0.35,53.6,,
+W21X57,21.1,0.405,46.3,,
+W21X50,20.8,0.38,49.4,,
+W21X44,20.7,0.35,53.6,,
+W18X311,22.3,1.52,10.4,,
+W18X283,21.9,1.4,11.3,,
+W18X258,21.5,1.28,12.5,,
+W18X234,21.1,1.16,13.8,,
+W18X211,20.7,1.06,15.1,,
+W18X192,20.4,0.96,16.7,,
+W18X175,20,0.89,18,,
+W18X158,19.7,0.81,19.8,,
+W18X143,19.5,0.73,22,,
+W18X130,19.3,0.67,23.9,,
+W18X119,19,0.655,24.5,,
+W18X106,18.7,0.59,27.2,,
+W18X97,18.6,0.535,30,,
+W18X86,18.4,0.48,33.4,,
+W18X76,18.2,0.425,37.8,,
+W18X71,18.5,0.495,32.4,,
+W18X65,18.4,0.45,35.7,,
+W18X60,18.2,0.415,38.7,,
+W18X55,18.1,0.39,41.1,,
+W18X50,18,0.355,45.2,,
+W18X46,18.1,0.36,44.6,,
+W18X40,17.9,0.315,50.9,,
+W18X35,17.7,0.3,53.5,,
+W16X100,17,0.585,24.3,,
+W16X89,16.8,0.525,27,,
+W16X77,16.5,0.455,31.2,,
+W16X67,16.3,0.395,35.9,,
+W16X57,16.4,0.43,33,,
+W16X50,16.3,0.38,37.4,,
+W16X45,16.1,0.345,41.1,,
+W16X40,16,0.305,46.5,,
+W16X36,15.9,0.295,48.1,,
+W16X31,15.9,0.275,51.6,,
+W16X26,15.7,0.25,56.8,,
+W14X873,23.6,3.94,2.89,,
+W14X808,22.8,3.74,3.04,,
+W14X730,22.4,3.07,3.71,,
+W14X665,21.6,2.83,4.03,,
+W14X605,20.9,2.6,4.39,,
+W14X550,20.2,2.38,4.79,,
+W14X500,19.6,2.19,5.21,,
+W14X455,19,2.02,5.66,,
+W14X426,18.7,1.88,6.08,,
+W14X398,18.3,1.77,6.44,,
+W14X370,17.9,1.66,6.89,,
+W14X342,17.5,1.54,7.41,,
+W14X311,17.1,1.41,8.09,,
+W14X283,16.7,1.29,8.84,,
+W14X257,16.4,1.18,9.71,,
+W14X233,16,1.07,10.7,,
+W14X211,15.7,0.98,11.6,,
+W14X193,15.5,0.89,12.8,,
+W14X176,15.2,0.83,13.7,,
+W14X159,15,0.745,15.3,,
+W14X145,14.8,0.68,16.8,,
+W14X132,14.7,0.645,17.7,,
+W14X120,14.5,0.59,19.3,,
+W14X109,14.3,0.525,21.7,,
+W14X99,14.2,0.485,23.5,,
+W14X90,14,0.44,25.9,,
+W14X82,14.3,0.51,22.4,,
+W14X74,14.2,0.45,25.4,,
+W14X68,14,0.415,27.5,,
+W14X61,13.9,0.375,30.4,,
+W14X53,13.9,0.37,30.9,,
+W14X48,13.8,0.34,33.6,,
+W14X43,13.7,0.305,37.4,,
+W14X38,14.1,0.31,39.6,,
+W14X34,14,0.285,43.1,,
+W14X30,13.8,0.27,45.4,,
+W14X26,13.9,0.255,48.1,,
+W14X22,13.7,0.23,53.3,,
+W12X336,16.8,1.78,5.47,,
+W12X305,16.3,1.63,5.98,,
+W12X279,15.9,1.53,6.35,,
+W12X252,15.4,1.4,6.96,,
+W12X230,15.1,1.29,7.56,,
+W12X210,14.7,1.18,8.23,,
+W12X190,14.4,1.06,9.16,,
+W12X170,14,0.96,10.1,,
+W12X152,13.7,0.87,11.2,,
+W12X136,13.4,0.79,12.3,,
+W12X120,13.1,0.71,13.7,,
+W12X106,12.9,0.61,15.9,,
+W12X96,12.7,0.55,17.7,,
+W12X87,12.5,0.515,18.9,,
+W12X79,12.4,0.47,20.7,,
+W12X72,12.3,0.43,22.6,,
+W12X65,12.1,0.39,24.9,,
+W12X58,12.2,0.36,27,,
+W12X53,12.1,0.345,28.1,,
+W12X50,12.2,0.37,26.8,,
+W12X45,12.1,0.335,29.6,,
+W12X40,11.9,0.295,33.6,,
+W12X35,12.5,0.3,36.2,,
+W12X30,12.3,0.26,41.8,,
+W12X26,12.2,0.23,47.2,,
+W12X22,12.3,0.26,41.8,,
+W12X19,12.2,0.235,46.2,,
+W12X16,12,0.22,49.4,,
+W12X14,11.9,0.2,54.3,,
+W10X112,11.4,0.755,10.4,,
+W10X100,11.1,0.68,11.6,,
+W10X88,10.8,0.605,13,,
+W10X77,10.6,0.53,14.8,,
+W10X68,10.4,0.47,16.7,,
+W10X60,10.2,0.42,18.7,,
+W10X54,10.1,0.37,21.2,,
+W10X49,10,0.34,23.1,,
+W10X45,10.1,0.35,22.5,,
+W10X39,9.92,0.315,25,,
+W10X33,9.73,0.29,27.1,,
+W10X30,10.5,0.3,29.5,,
+W10X26,10.3,0.26,34,,
+W10X22,10.2,0.24,36.9,,
+W10X19,10.2,0.25,35.4,,
+W10X17,10.1,0.24,36.9,,
+W10X15,9.99,0.23,38.5,,
+W10X12,9.87,0.19,46.6,,
+W8X67,9,0.57,11.1,,
+W8X58,8.75,0.51,12.4,,
+W8X48,8.5,0.4,15.9,,
+W8X40,8.25,0.36,17.6,,
+W8X35,8.12,0.31,20.5,,
+W8X31,8,0.285,22.3,,
+W8X28,8.06,0.285,22.3,,
+W8X24,7.93,0.245,25.9,,
+W8X21,8.28,0.25,27.5,,
+W8X18,8.14,0.23,29.9,,
+W8X15,8.11,0.245,28.1,,
+W8X13,7.99,0.23,29.9,,
+W8X10,7.89,0.17,40.5,,
+W6X25,6.38,0.32,15.5,,
+W6X20,6.2,0.26,19.1,,
+W6X15,5.99,0.23,21.6,,
+W6X16,6.28,0.26,19.1,,
+W6X12,6.03,0.23,21.6,,
+W6X9,5.9,0.17,29.2,,
+W6X8.5,5.83,0.17,29.1,,
+W5X19,5.15,0.27,13.7,,
+W5X16,5.01,0.24,15.4,,
+W4X13,4.16,0.28,10.6,,
+`;
+
+        const rawSteelCSV = `
+Designation,Grade,Fy
+A36,Default,36
+A53,Gr. B,35
+A500,Gr. B,42
+A500,Gr. C,46
+A501,Gr. A,36
+A501,Gr. B,50
+A529,Gr. 50,50
+A529,Gr. 55,55
+A709,36,36
+A1043,36,36
+A1043,50,50
+A1085,Gr. A,50
+A572,Gr. 42,42
+A572,Gr. 50,50
+A572,Gr. 55,55
+A572,Gr. 60,60
+A572,Gr. 65,65
+"A618,Gr. Ia, Ib, & II",50
+A618,Gr. III,50
+A709,50,50
+A709,50S,50
+A709,50W,50
+A913,50,50
+A913,60,60
+A913,70,65
+A913,Default,70
+A992,Default,50
+A1065,Gr. 50,50
+A588,Default50
+A847,Default,50
+A1065,Gr. 50W,50
+`;
+
+        let wDatabase = {};
+        let steelDatabase = {};
+        const E = 29000;
+
+        window.onload = function() {
+            const wRows = rawWSectionCSV.trim().split('\n');
+            const wSelect = document.getElementById('wSection');
+            for (let i = 1; i < wRows.length; i++) {
+                const cols = wRows[i].split(',');
+                if (cols.length >= 4) {
+                    const name = cols[0].trim();
+                    wDatabase[name] = { d: parseFloat(cols[1]), tw: parseFloat(cols[2]), lambda_w: parseFloat(cols[3]) };
+                    wSelect.add(new Option(name, name));
+                }
+            }
+
+            const steelRows = rawSteelCSV.trim().split('\n');
+            const steelSelect = document.getElementById('steelDesig');
+            for (let i = 1; i < steelRows.length; i++) {
+                const cols = steelRows[i].split(',');
+                if (cols.length >= 3) {
+                    const desig = cols[0].trim();
+                    const grade = cols[1].trim();
+                    if(!steelDatabase[desig]) {
+                        steelDatabase[desig] = {};
+                        steelSelect.add(new Option(desig, desig));
+                    }
+                    steelDatabase[desig][grade] = parseFloat(cols[2]);
+                }
+            }
+        };
+
+        document.getElementById('wSection').addEventListener('change', function() {
+            const props = wDatabase[this.value];
+            document.getElementById('sectionPropsDisplay').innerText = props ? `d = ${props.d} | tw = ${props.tw} | h/tw = ${props.lambda_w}` : '';
+        });
+
+        document.getElementById('webCondition').addEventListener('change', function() {
+            const isStiffened = this.value === 'stiffened';
+            document.getElementById('stiffenerGroup').style.display = isStiffened ? 'flex' : 'none';
+            if (!isStiffened) document.getElementById('stiffenerDist').value = '';
+        });
+
+        document.getElementById('steelDesig').addEventListener('change', function() {
+            const gradeSelect = document.getElementById('steelGrade');
+            const fyInput = document.getElementById('fyInput');
+            const desig = this.value;
+            gradeSelect.innerHTML = '';
+
+            if (desig === 'Custom') {
+                gradeSelect.add(new Option('N/A', ''));
+                gradeSelect.disabled = true;
+                fyInput.disabled = false;
+                fyInput.value = '';
+            } else {
+                fyInput.disabled = true;
+                const grades = Object.keys(steelDatabase[desig]);
+                if (grades.length === 1) {
+                    gradeSelect.add(new Option(grades[0] === 'Default' ? 'N/A' : grades[0], grades[0]));
+                    gradeSelect.disabled = true;
+                    fyInput.value = steelDatabase[desig][grades[0]];
+                } else {
+                    gradeSelect.add(new Option("Select Grade...", ""));
+                    grades.forEach(g => gradeSelect.add(new Option(g, g)));
+                    gradeSelect.disabled = false;
+                    fyInput.value = '';
+                }
+            }
+        });
+
+        document.getElementById('steelGrade').addEventListener('change', function() {
+            const desig = document.getElementById('steelDesig').value;
+            document.getElementById('fyInput').value = (this.value && steelDatabase[desig]) ? steelDatabase[desig][this.value] : '';
+        });
+
+        function calculateShear() {
+            const sectionId = document.getElementById('wSection').value;
+            const desig = document.getElementById('steelDesig').value;
+            const fyInput = document.getElementById('fyInput').value;
+            const webCond = document.getElementById('webCondition').value;
+            const a_val = parseFloat(document.getElementById('stiffenerDist').value);
+
+            if (!sectionId || !desig || !fyInput) { alert("Complete all inputs."); return; }
+
+            const props = wDatabase[sectionId];
+            const Fy = parseFloat(fyInput);
+            const d = props.d, tw = props.tw, lambda_w = props.lambda_w;
+            const h = lambda_w * tw, Aw = d * tw;
+
+            let sol = `<strong>Step 1: Determine kv</strong><br>`;
+            let kv = 5.0;
+            if (webCond === 'stiffened') {
+                if (isNaN(a_val)) { alert("Enter distance 'a'"); return; }
+                const a_h = a_val / h;
+                let c_kv = 5 + (5 / Math.pow(a_h, 2));
+                sol += `a/h = ${a_h.toFixed(3)} | Calc kv = ${c_kv.toFixed(3)}<br>`;
+                if (a_h > 3.0 || a_h > Math.pow(260 / lambda_w, 2)) {
+                    kv = 5.0; sol += `Constraint met &rarr; <span class="highlight">kv = 5.0</span><br>`;
+                } else {
+                    kv = c_kv; sol += `Using calc &rarr; <span class="highlight">kv = ${kv.toFixed(3)}</span><br>`;
+                }
+            } else {
+                kv = sectionId.startsWith("WT") ? 1.2 : 5.0;
+                sol += `Unstiffened &rarr; <span class="highlight">kv = ${kv}</span><br>`;
+            }
+
+            sol += `<br><strong>Step 2: Solve for Cv & Factors</strong><br>`;
+            let Cv, phi_v, Omega_v;
+            const lim1 = 2.24 * Math.sqrt(E / Fy);
+            if (lambda_w <= lim1) {
+                Cv = 1.0; phi_v = 1.0; Omega_v = 1.5;
+                sol += `h/tw &le; ${lim1.toFixed(2)} &rarr; Condition 1: <span class="highlight">Cv=1.0, &phi;v=1.0, &Omega;v=1.50</span>`;
+            } else {
+                phi_v = 0.9; Omega_v = 1.67;
+                const c1 = 1.10 * Math.sqrt((kv * E) / Fy), c2 = 1.37 * Math.sqrt((kv * E) / Fy);
+                if (lambda_w <= c1) {
+                    Cv = 1.0; sol += `Case 1: <span class="highlight">Cv = 1.0</span>`;
+                } else if (lambda_w <= c2) {
+                    Cv = c1 / lambda_w; sol += `Case 2: <span class="highlight">Cv = ${Cv.toFixed(3)}</span>`;
+                } else {
+                    Cv = (1.51 * E * kv) / (Math.pow(lambda_w, 2) * Fy); sol += `Case 3: <span class="highlight">Cv = ${Cv.toFixed(3)}</span>`;
+                }
+            }
+
+            const Vn = 0.6 * Fy * Aw * Cv;
+
+            // Update results display
+            document.getElementById('solutionBox').innerHTML = sol;
+            document.getElementById('resSectionName').innerText = sectionId;
+            document.getElementById('resSectionProps').innerText = `Fy=${Fy} ksi | d=${d} in | tw=${tw} in | h/tw=${lambda_w}`;
+            document.getElementById('resVn').innerText = Vn.toFixed(2) + ' kips';
+            document.getElementById('resVu').innerText = (phi_v * Vn).toFixed(2) + ' kips';
+            document.getElementById('resVa').innerText = (Vn / Omega_v).toFixed(2) + ' kips';
+            document.getElementById('resLambda').innerText = lambda_w.toFixed(1);
+
+            document.getElementById('labelVu').innerHTML = `LRFD &Phi;v = ${phi_v.toFixed(2)}`;
+            document.getElementById('labelVa').innerHTML = `ASD &Omega;v = ${Omega_v.toFixed(2)}`;
+
+            document.getElementById('resultsPanel').style.display = 'flex';
+            document.getElementById('btnPdf').style.display = 'inline-block';
+
+            populatePDF(sectionId, desig, document.getElementById('steelGrade').value, webCond, a_val, props, Fy, Cv, Vn, phi_v * Vn, Vn / Omega_v);
+        }
+
+        function populatePDF(s, d, g, w, a, p, fy, cv, vn, vu, va) {
+            document.getElementById('pdfSection').innerText = s;
+            document.getElementById('pdfSteel').innerText = d;
+            document.getElementById('pdfGrade').innerText = (g && g !== 'Default') ? g : 'N/A';
+            document.getElementById('pdfFy').innerText = fy + " ksi";
+            document.getElementById('pdfWeb').innerText = w === 'stiffened' ? 'Stiffened' : 'Unstiffened';
+
+            if(w === 'stiffened') {
+                document.getElementById('pdfStiffenerRow').style.display = 'block';
+                document.getElementById('pdfA').innerText = a + " in";
+            } else {
+                document.getElementById('pdfStiffenerRow').style.display = 'none';
+            }
+
+            document.getElementById('pdfD').innerText = p.d + " in";
+            document.getElementById('pdfTw').innerText = p.tw + " in";
+            document.getElementById('pdfLambda').innerText = p.lambda_w;
+
+            document.getElementById('pdfVn').innerText = vn.toFixed(2) + " kips";
+            document.getElementById('pdfVu').innerText = vu.toFixed(2) + " kips";
+            document.getElementById('pdfVa').innerText = va.toFixed(2) + " kips";
+        }
+
+        function resetForm() { location.reload(); }
+
+        function generatePDF() {
+            const el = document.getElementById('pdf-template');
+            const wrapper = document.querySelector('.calculator-container');
+
+            wrapper.style.display = 'none';
+            el.style.display = 'block';
+            window.scrollTo(0, 0);
+
+            const opt = {
+                margin: 0.5,
+                filename: 'Steel_Shear_Analysis.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(el).save().then(() => {
+                el.style.display = 'none';
+                wrapper.style.display = 'block';
+            });
+        }
+    </script>
+</body>
+</html>

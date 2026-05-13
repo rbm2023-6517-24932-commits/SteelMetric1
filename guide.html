@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelMetric - Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-cyan: #22d3ee;
+            --accent-blue: #38bdf8;
+            --accent-orange: #f97316;
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            font-family: 'Montserrat', sans-serif;
+            color: var(--text-main);
+            background: var(--bg-page);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Ambient background glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15);
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12);
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+
+        /* Animations */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeSlideLeft {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes subLinkPop {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        header {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 35px 10%;
+            z-index: 10;
+            animation: fadeIn 0.6s ease both;
+            animation-delay: 0.1s;
+        }
+        .header-nav {
+            list-style: none;
+            display: flex;
+            gap: 40px;
+            margin: 0;
+            padding: 0;
+        }
+        .header-nav li {
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        .header-nav li:nth-child(1) { animation-delay: 0.2s; }
+        .header-nav li:nth-child(2) { animation-delay: 0.35s; }
+        .header-nav li:nth-child(3) { animation-delay: 0.5s; }
+        .header-nav li a {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-label);
+            text-transform: uppercase;
+        }
+        .header-nav li a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+        }
+
+        /* Main layout — centered vertically, no scroll */
+        main {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10%;
+            position: relative;
+            z-index: 1;
+            gap: 60px;
+            min-height: 0;
+        }
+
+        /* ===================== */
+        /* LEFT SIDE */
+        /* ===================== */
+        .guide-left {
+            width: 45%;
+            max-width: 520px;
+            opacity: 0;
+            animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .guide-left h1 {
+            font-size: 42px;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+        }
+        .guide-left .subtitle {
+            font-size: 14px;
+            color: var(--text-label);
+            margin: 0 0 24px 0;
+            letter-spacing: 1px;
+        }
+
+        .instructions-box {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px 26px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        .instructions-box h2 {
+            font-size: 15px;
+            color: var(--accent-cyan);
+            margin: 0 0 18px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+        .instruction-item {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 14px;
+            align-items: flex-start;
+        }
+        .instruction-item:last-child { margin-bottom: 0; }
+        .step-number {
+            min-width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            font-weight: 800;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(34, 211, 238, 0.3);
+        }
+        .step-content h3 {
+            margin: 0 0 3px 0;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #e2e8f0;
+            letter-spacing: 0.3px;
+        }
+        .step-content p {
+            margin: 0;
+            font-size: 12px;
+            color: var(--text-label);
+            line-height: 1.5;
+        }
+
+        /* ===================== */
+        /* RIGHT SIDE */
+        /* ===================== */
+        .guide-right {
+            width: 45%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            align-items: flex-end;
+        }
+        .guide-right-header {
+            text-align: right;
+            margin-bottom: 6px;
+            opacity: 0;
+            animation: fadeSlideLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.45s;
+        }
+        .guide-right-header h2 {
+            font-size: 13px;
+            color: var(--accent-orange);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 0 0 4px 0;
+            font-weight: 700;
+        }
+        .guide-right-header p {
+            font-size: 12px;
+            color: var(--text-label);
+            margin: 0;
+        }
+
+        .menu-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            opacity: 0;
+            animation: fadeSlideLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .menu-group:nth-child(2) { animation-delay: 0.5s; }
+        .menu-group:nth-child(3) { animation-delay: 0.6s; }
+        .menu-group:nth-child(4) { animation-delay: 0.7s; }
+        .menu-group:nth-child(5) { animation-delay: 0.8s; }
+
+        /* Main pill buttons */
+        .design-toggle {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 18px 28px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #e2e8f0;
+            cursor: pointer;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: background 0.35s ease, border-color 0.35s ease,
+                        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        box-shadow 0.35s ease, color 0.3s ease;
+        }
+        .design-toggle:hover {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(34, 211, 238, 0.05) 100%);
+            border-color: rgba(34, 211, 238, 0.5);
+            border-top: 1px solid rgba(34, 211, 238, 0.8);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(34, 211, 238, 0.25);
+            color: #ffffff;
+        }
+        .design-toggle:active {
+            transform: translateY(0px) scale(0.98);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .design-toggle.open {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(34, 211, 238, 0.03) 100%);
+            border-color: rgba(34, 211, 238, 0.35);
+            border-top: 1px solid rgba(34, 211, 238, 0.6);
+            color: #dff0ff;
+        }
+
+        /* Sub-menu */
+        .sub-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            gap: 10px;
+            margin-top: 0;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transform-origin: top center;
+            transition: opacity 0.35s ease,
+                        max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                        margin-top 0.35s ease;
+        }
+        .sub-menu.active {
+            opacity: 1;
+            max-height: 300px;
+            margin-top: 10px;
+            pointer-events: all;
+        }
+        .sub-menu.active .sub-link {
+            animation: subLinkPop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .sub-menu.active .sub-link:nth-child(1) { animation-delay: 0.05s; }
+        .sub-menu.active .sub-link:nth-child(2) { animation-delay: 0.1s; }
+
+        /* Sub-menu links */
+        .sub-link {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            padding: 13px 16px;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.4;
+            font-weight: 600;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+                        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+        }
+        .sub-link:hover {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(34, 211, 238, 0.02) 100%);
+            color: #ffffff;
+            border-color: rgba(34, 211, 238, 0.4);
+            border-top: 1px solid rgba(34, 211, 238, 0.7);
+            box-shadow: 0 4px 15px rgba(34, 211, 238, 0.15);
+            transform: translateY(-2px);
+        }
+        .sub-link:active {
+            transform: scale(0.97);
+            transition: transform 0.1s ease;
+        }
+
+        /* ===================== */
+        /* VIDEO MODAL */
+        /* ===================== */
+        .video-modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(4, 9, 20, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+        .video-modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .video-modal-container {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 25px;
+            max-width: 900px;
+            width: 90%;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .video-modal-overlay.active .video-modal-container {
+            transform: translateY(0) scale(1);
+        }
+        .video-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .video-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .video-modal-close {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+        .video-modal-close:hover {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239,68,68,0.4);
+        }
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #000;
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+            border-radius: 12px;
+        }
+        .video-placeholder {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-label);
+            gap: 12px;
+        }
+        .video-placeholder-icon {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #040914;
+        }
+        .video-placeholder p {
+            margin: 0;
+            font-size: 13px;
+        }
+    </style>
+
+</head>
+<body>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <header>
+        <nav>
+            <ul class="header-nav">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="guide.html">Guide</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <!-- LEFT SIDE: Instructions -->
+        <div class="guide-left">
+            <h1>GUIDE</h1>
+            <p class="subtitle">How to use the calculators</p>
+
+            <div class="instructions-box">
+                <h2>General Instructions</h2>
+
+                <div class="instruction-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Input Section Properties</h3>
+                        <p>Enter the dimensions or select a standard shape from the selection.</p>
+                    </div>
+                </div>
+
+                <div class="instruction-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Define Material & Length</h3>
+                        <p>Specify the yield strength (Fy) and the length (L) of your member.</p>
+                    </div>
+                </div>
+
+                <div class="instruction-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Select Analysis Method</h3>
+                        <p>Toggle between LRFD or ASD to apply the appropriate safety factors.</p>
+                    </div>
+                </div>
+
+                <div class="instruction-item">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>Review Results</h3>
+                        <p>The calculator will instantly display the design strength and indicate if the member passes the limit state checks.</p>
+                    </div>
+                </div>
+
+                <div class="instruction-item">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>Check for Warnings</h3>
+                        <p>Look out for "Failed" indicators, which suggest the member did not pass the required specifications.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Topic Buttons -->
+        <div class="guide-right">
+            <div class="guide-right-header">
+                <h2>Calculator Topics</h2>
+                <p>Hover to reveal Analysis & Design options</p>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle" data-topic="Axial Tension">Axial Tension</a>
+                <div class="sub-menu">
+                    <button class="sub-link" data-iframe='<iframe src="https://drive.google.com/file/d/1v5v-GTBC_m6wbgJkBusBEFqNcHv7hICs/preview" width="640" height="480" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen style="border:none; width:100%; height:100%;"></iframe>'>Axial Tension<br>Analysis</button>
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Axial Tension<br>Design</button>
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Tension Rods<br>Analysis</button>
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Tension Rods<br>Design</button>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle" data-topic="Axial Compression">Axial Compression</a>
+                <div class="sub-menu">
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Compression Members<br>Analysis</button>
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Compression Members<br>Design</button>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle" data-topic="Members for Bending">Members for Bending</a>
+                <div class="sub-menu">
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Members for Bending<br>Analysis</button>
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Members for Bending<br>Design</button>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle" data-topic="Shear Strength">Shear Strength of Structural Members</a>
+                <div class="sub-menu">
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Shear Strength<br>Analysis</button>
+                    <button class="sub-link" data-iframe="PASTE_YOUR_IFRAME_HERE">Shear Strength<br>Design</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- VIDEO MODAL -->
+    <div class="video-modal-overlay" id="videoModal">
+        <div class="video-modal-container">
+            <div class="video-modal-header">
+                <h3 id="modalTitle">Video Tutorial</h3>
+                <button class="video-modal-close" id="modalClose">CLOSE</button>
+            </div>
+            <div class="video-wrapper" id="videoWrapper">
+                <!-- Video will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle dropdowns on hover (desktop) and click (mobile)
+        const menuGroups = document.querySelectorAll('.menu-group');
+
+        menuGroups.forEach(group => {
+            const toggle = group.querySelector('.design-toggle');
+            const subMenu = group.querySelector('.sub-menu');
+
+            group.addEventListener('mouseenter', () => {
+                document.querySelectorAll('.sub-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+                document.querySelectorAll('.design-toggle').forEach(btn => {
+                    btn.classList.remove('open');
+                });
+                subMenu.classList.add('active');
+                toggle.classList.add('open');
+            });
+
+            group.addEventListener('mouseleave', () => {
+                subMenu.classList.remove('active');
+                toggle.classList.remove('open');
+            });
+
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isOpen = subMenu.classList.contains('active');
+                document.querySelectorAll('.sub-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+                document.querySelectorAll('.design-toggle').forEach(btn => {
+                    btn.classList.remove('open');
+                });
+                if (!isOpen) {
+                    subMenu.classList.add('active');
+                    this.classList.add('open');
+                }
+            });
+        });
+
+        // Video modal logic
+        const modal = document.getElementById('videoModal');
+        const modalClose = document.getElementById('modalClose');
+        const modalTitle = document.getElementById('modalTitle');
+        const videoWrapper = document.getElementById('videoWrapper');
+        const videoPlaceholder = document.getElementById('videoPlaceholder');
+
+        /* ============================================
+           HOW TO ADD YOUR YOUTUBE VIDEOS:
+
+           1. Go to YouTube → Share → Embed
+           2. Copy the full <iframe>...</iframe> code
+           3. Paste it inside the data-iframe attribute below
+              (replace the placeholder text)
+
+           Example:
+           data-iframe='<iframe width="560" height="315" src="https://www.youtube.com/embed/VIDEO_ID?si=..." title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>'
+           ============================================ */
+
+        document.querySelectorAll('.sub-link').forEach(link => {
+            link.addEventListener('click', function() {
+                const topic = this.closest('.menu-group').querySelector('.design-toggle').getAttribute('data-topic');
+                const type = this.textContent.includes('Analysis') ? 'Analysis' : 'Design';
+                const iframeHTML = this.getAttribute('data-iframe');
+
+                modalTitle.textContent = topic + ' - ' + type;
+
+                if (iframeHTML && !iframeHTML.includes('PASTE_YOUR_IFRAME_HERE')) {
+                    videoWrapper.innerHTML = iframeHTML;
+                } else {
+                    videoWrapper.innerHTML = `
+                        <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:15px;color:var(--text-label);text-align:center;padding:30px;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--accent-cyan),var(--accent-blue));display:flex;align-items:center;justify-content:center;font-size:24px;color:#040914;">▶</div>
+                            <p style="color:var(--text-main);font-weight:600;font-size:16px;margin:0;">No video linked yet</p>
+                            <p style="font-size:13px;margin:0;max-width:400px;line-height:1.5;">Paste your YouTube iframe embed code into the <code>data-iframe</code> attribute of this button in the HTML.</p>
+                        </div>`;
+                }
+
+                modal.classList.add('active');
+            });
+        });
+
+        modalClose.addEventListener('click', () => {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                videoWrapper.innerHTML = '';
+            }, 400);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modalClose.click();
+            }
+        });
+    </script>
+
+</body>
+</html>

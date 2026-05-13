@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Analysis - Axial Compression</title>
+    <style>
+        /* --- Boot-Up Animation Styles --- */
+        #boot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-page); /* Matches your dark background */
+            z-index: 9999; /* Keeps it above everything else */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+
+        .boot-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .boot-line {
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            animation: load-line 1.8s ease-in-out forwards;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.6)); transform: scale(1.02); }
+        }
+
+        @keyframes load-line {
+            0% { width: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 300px; opacity: 1; }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        /* Ensure it doesn't show up when printing */
+        @media print {
+            #boot-overlay { display: none !important; }
+        }
+        /* --- End Boot-Up Animation Styles --- */
+        /* --- Back Button Styles --- */
+.back-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    text-decoration: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-color: #3b82f6; 
+    transform: translateX(-3px); 
+}
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows to make Glassmorphism pop */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15); /* Cyan glow */
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12); /* Orange glow */
+        }
+
+        /* Main Glass Container */
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 1050px; 
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 25px;
+            align-items: start;
+        }
+
+        .form-group, .sub-form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .left-column-container, .right-column-container {
+            display: flex; flex-direction: column; gap: 18px;
+        }
+
+        .input-wrapper {
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        label {
+            font-size: 0.85rem; color: var(--text-label); font-weight: 500;
+        }
+
+        /* Glass Inputs */
+        input, select {
+            background-color: var(--glass-input);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input.value-input { width: 100px; text-align: center; }
+
+        input[readonly], select:disabled {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px top 50%;
+            background-size: 10px auto;
+            padding-right: 35px;
+        }
+        
+        select option { background-color: #111827; color: white; }
+
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        .unit-label { color: var(--text-label); font-size: 0.95rem; }
+
+        /* Glass Panels */
+        .segments-section, .total-length-container, .segment-row {
+            background: var(--glass-panel);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .segments-section {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .segments-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;
+        }
+
+        .segments-header h3 { margin: 0; font-size: 1.15rem; color: var(--accent-cyan); }
+
+        .total-length-container {
+            display: flex; align-items: flex-start; flex-direction: column; gap: 15px; margin-bottom: 20px;
+            padding: 18px; border: 1px solid rgba(249, 115, 22, 0.3);
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.05), transparent);
+        }
+
+        /* Glassmorphism Buttons */
+        .btn-add-segment {
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02));
+            color: white;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .btn-add-segment:hover { background: rgba(255,255,255,0.15); transform: translateY(-1px); }
+
+        .segments-input-area { display: flex; flex-direction: column; gap: 10px; }
+        .segment-row { display: flex; gap: 10px; align-items: center; padding: 12px; }
+        .segment-row input.brace-elev { width: 130px; }
+        .segment-row select.k-factor-dropdown { flex-grow: 1; }
+        .segment-row select.axis-dropdown { width: 120px; }
+
+        .btn-remove {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-remove:hover { background: var(--danger-red); color: white; box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
+
+        .segments-visualizer-area {
+            position: relative;
+            min-height: 400px;
+            border-left: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Gradient Action Buttons */
+        .btn-calculate {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+        }
+        .btn-calculate:hover { 
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        .btn-print {
+            background: transparent; 
+            color: var(--text-label); 
+            border: 1px solid var(--glass-border);
+            padding: 12px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; width: 100%; margin-top: 15px; 
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .btn-print:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
+
+        /* ADVANCED RESULTS PANEL (Glass Cards) */
+        .results-panel {
+            margin-top: 35px; 
+            display: none; 
+            animation: fadeIn 0.5s ease-out;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .summary-header {
+            font-size: 1.25rem; font-weight: bold; color: #ffffff; margin-bottom: 20px;
+            display: inline-block; border-bottom: 2px solid var(--accent-cyan); padding-bottom: 5px;
+        }
+
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .summary-item { display: flex; flex-direction: column; gap: 6px; }
+        .summary-label { font-size: 0.8rem; color: var(--text-label); text-transform: uppercase; letter-spacing: 1px;}
+        .summary-value { font-size: 1.3rem; font-weight: bold; color: white; }
+        
+        /* Neon Accents */
+        .val-cyan { color: var(--accent-cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.4); }
+        .val-yellow { color: var(--accent-yellow); text-shadow: 0 0 10px rgba(253, 224, 71, 0.4); }
+        .val-green { color: var(--accent-green); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+
+        .k-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.95rem; color: var(--text-main); }
+        .k-table th { text-align: left; padding: 15px 10px; color: var(--text-label); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; border-bottom: 1px solid var(--glass-border); }
+        .k-table td { padding: 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .k-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .analyzed-section-panel {
+            text-align: center; padding: 40px;
+            background: radial-gradient(circle at top, rgba(34, 211, 238, 0.08), transparent 70%);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+        }
+
+        .section-subtitle { font-size: 0.85rem; color: var(--accent-cyan); text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-bottom: 10px; }
+        .section-title { font-size: 4rem; font-weight: 900; color: white; margin: 0; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .section-props { font-size: 1rem; color: var(--text-label); margin: 20px 0 35px 0; }
+
+        .section-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; max-width: 450px; margin: 0 auto; }
+        .stat-item { display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-val { font-size: 1.8rem; font-weight: bold; }
+
+        #print-report { display: none; }
+
+        /* Ensure Print Report stays plain white */
+        @media print {
+            body { background-color: white; background-image: none; color: black; padding: 0; margin: 0; display: block; }
+            .bg-blob, .calculator-container { display: none !important; } 
+            #print-report { display: block; width: 100%; font-family: 'Times New Roman', Times, serif; }
+            .print-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px; }
+            .print-header h1 { margin: 0; font-size: 24pt; letter-spacing: 2px; }
+            .print-header h2 { margin: 5px 0 0 0; font-size: 14pt; color: #333; font-weight: normal; }
+            .print-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11pt; }
+            .print-table th, .print-table td { border: 1px solid #000; padding: 10px; text-align: left; }
+            .print-table th { background-color: #f2f2f2; font-weight: bold; width: 40%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL ANALYSIS</div>
+        <div class="boot-line"></div>
+    </div>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+
+<div class="bg-blob blob-1"></div>
+<div class="bg-blob blob-2"></div>
+
+<div class="calculator-container">
+    <div class="header">
+        <h1>STEEL ANALYSIS</h1>
+        <span class="badge">AXIAL COMPRESSION</span>
+    </div>
+
+    <div class="form-grid">
+        <div class="left-column-container">
+            <div class="sub-form-group">
+                <label>Design Method</label>
+                <select id="method">
+                    <option value="LRFD">LRFD</option>
+                    <option value="ASD">ASD</option>
+                </select>
+            </div>
+            <div class="sub-form-group">
+                <label>Analyzed Section (W-Shape)</label>
+                <select id="w_shape_select"></select>
+            </div>
+        </div>
+
+        <div class="right-column-container">
+            <div class="sub-form-group">
+                <label>ASTM Designation</label>
+                <select id="astm_select" onchange="handleASTMChange()"></select>
+            </div>
+            <div class="sub-form-group">
+                <label>Grade</label>
+                <select id="grade_select" onchange="handleGradeChange()"></select>
+            </div>
+            <div class="sub-form-group">
+                <label>Yield Strength (Fy)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="fy_value" class="value-input" value="50" step="1" readonly>
+                    <span class="unit-label">ksi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="segments-section">
+        <div class="segments-input-area">
+            <div class="segments-header">
+                <h3>Column Geometry & Bracing</h3>
+                <button class="btn-add-segment" onclick="addSegment()">+ Add Brace Point</button>
+            </div>
+            
+            <div class="total-length-container">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <label style="width: 135px;">Total Column Length:</label>
+                    <div class="input-wrapper" style="width:130px;">
+                        <input type="number" id="total-length" value="30" step="0.1" oninput="updateVisualizer()">
+                        <span class="unit-label">ft</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <label style="width: 135px;">Base (0 ft):</label>
+                    <select id="base_condition" onchange="updateVisualizer()" style="width: 130px;">
+                        <option value="Fixed">Fixed</option>
+                        <option value="Pinned">Pinned</option>
+                        <option value="Free">Free</option>
+                    </select>
+                </div>
+            </div>
+
+            <label style="margin-bottom: 5px; display: block; color: var(--accent-cyan);">Intermediate & Top Bracing Points:</label>
+            <div id="segments-container">
+                <div class="segment-row">
+                    <input type="number" class="brace-elev" placeholder="Elev from 0 (ft)" value="15" step="0.1" onchange="sortSegmentsAndUpdate()">
+                    <select class="k-factor-dropdown" onchange="updateVisualizer()">
+                        <option value="1.0" data-desc="Pinned - Pinned">K = 1.0 (Pinned)</option>
+                        <option value="0.65" data-desc="Fixed - Fixed">K = 0.65 (Fixed-Fixed)</option>
+                        <option value="0.8" data-desc="Fixed - Pinned">K = 0.8 (Fixed-Pinned)</option>
+                        <option value="1.2" data-desc="Sway">K = 1.2 (Sway)</option>
+                        <option value="2.1" data-desc="Cantilever">K = 2.1 (Cantilever)</option>
+                    </select>
+                    <select class="axis-dropdown" onchange="updateVisualizer()">
+                        <option value="Both">Both Axes</option>
+                        <option value="X">X-Axis (Left)</option>
+                        <option value="Y">Y-Axis (Right)</option>
+                    </select>
+                    <button class="btn-remove" onclick="removeSegment(this)">X</button>
+                </div>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-label); margin-top: 5px; font-style: italic;">
+                * Type the elevation, then click away to automatically sort it from bottom to top.
+            </p>
+        </div>
+        
+        <div id="visualizer-svg-container" class="segments-visualizer-area"></div>
+    </div>
+
+    <button class="btn-calculate" onclick="calculate()">Analyze Capacity</button>
+    <button class="btn-print" onclick="window.print()">Print / Save PDF</button>
+
+    <div id="results-wrapper"></div>
+</div>
+
+<div id="print-report"></div>
+
+<script>
+    // --- Boot-Up Animation Trigger ---
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const overlay = document.getElementById('boot-overlay');
+            if (overlay) {
+                overlay.classList.add('hide-boot');
+            }
+        }, 1800); // 1.8 second delay before revealing the site
+    });
+    const steelData = {
+        "A36": { "Standard": 36 },
+        "A53": { "Gr. B": 35 },
+        "A500": { "Gr. B (42 ksi)": 42, "Gr. B (46 ksi)": 46, "Gr. C (46 ksi)": 46, "Gr. C (50 ksi)": 50 },
+        "A501": { "Gr. A": 36, "Gr. B": 50 },
+        "A529": { "Gr. 50": 50, "Gr. 55": 55 },
+        "A572": { "Gr. 55": 55, "Gr. 60": 60, "Gr. 65": 65 },
+        "A618": { "Gr. I": 50, "Gr. II": 50, "Gr. III": 50 },
+        "A709": { "Standard": 36, "50S (50 ksi)": 50, "50S (65 ksi)": 65, "50W": 50 },
+        "A913": { "Gr. 50": 50, "Gr. 60": 60, "Gr. 65": 65, "Gr. 70": 70 },
+        "A992": { "Standard": 50 },
+        "A1043": { "Gr. 36": 36, "Gr. 50": 50, "Gr. 52": 52, "Gr. 65": 65 },
+        "A1085": { "Gr. A": 50, "Gr. 42": 42, "Gr. 50": 50 },
+        "A1065": { "Gr. 50": 50 },
+        "Custom": { "Custom": null } 
+    };
+
+    const sectionDatabase = [
+        { name: "W14X873", weight: 873, Ag: 257, rx: 8.39, ry: 4.90 },
+        { name: "W14X808", weight: 808, Ag: 238, rx: 8.17, ry: 4.83 },
+        { name: "W14X730", weight: 730, Ag: 215, rx: 8.17, ry: 4.69 },
+        { name: "W14X665", weight: 665, Ag: 196, rx: 7.98, ry: 4.62 },
+        { name: "W14X605", weight: 605, Ag: 178, rx: 7.80, ry: 4.55 },
+        { name: "W14X550", weight: 550, Ag: 162, rx: 7.63, ry: 4.49 },
+        { name: "W14X500", weight: 500, Ag: 147, rx: 7.48, ry: 4.43 },
+        { name: "W14X455", weight: 455, Ag: 134, rx: 7.33, ry: 4.38 },
+        { name: "W14X426", weight: 426, Ag: 125, rx: 7.26, ry: 4.34 },
+        { name: "W14X398", weight: 398, Ag: 117, rx: 7.16, ry: 4.31 },
+        { name: "W14X370", weight: 370, Ag: 109, rx: 7.07, ry: 4.27 },
+        { name: "W14X342", weight: 342, Ag: 101, rx: 6.98, ry: 4.24 },
+        { name: "W14X311", weight: 311, Ag: 91.4, rx: 6.88, ry: 4.20 },
+        { name: "W14X283", weight: 283, Ag: 83.3, rx: 6.79, ry: 4.17 },
+        { name: "W14X257", weight: 257, Ag: 75.6, rx: 6.71, ry: 4.13 },
+        { name: "W14X233", weight: 233, Ag: 68.5, rx: 6.63, ry: 4.10 },
+        { name: "W14X211", weight: 211, Ag: 62.0, rx: 6.55, ry: 4.07 },
+        { name: "W14X193", weight: 193, Ag: 56.8, rx: 6.50, ry: 4.05 },
+        { name: "W14X176", weight: 176, Ag: 51.8, rx: 6.43, ry: 4.02 },
+        { name: "W14X159", weight: 159, Ag: 46.7, rx: 6.38, ry: 4.00 },
+        { name: "W14X145", weight: 145, Ag: 42.7, rx: 6.33, ry: 3.98 },
+        { name: "W14X132", weight: 132, Ag: 38.8, rx: 6.28, ry: 3.76 },
+        { name: "W14X120", weight: 120, Ag: 35.3, rx: 6.24, ry: 3.74 },
+        { name: "W14X109", weight: 109, Ag: 32.0, rx: 6.22, ry: 3.73 },
+        { name: "W14X99", weight: 99, Ag: 29.1, rx: 6.17, ry: 3.71 },
+        { name: "W14X90", weight: 90, Ag: 26.5, rx: 6.14, ry: 3.70 },
+        { name: "W14X82", weight: 82, Ag: 24.0, rx: 6.05, ry: 2.48 },
+        { name: "W14X74", weight: 74, Ag: 21.8, rx: 6.04, ry: 2.48 },
+        { name: "W14X68", weight: 68, Ag: 20.0, rx: 6.01, ry: 2.46 },
+        { name: "W14X61", weight: 61, Ag: 17.9, rx: 5.98, ry: 2.45 },
+        { name: "W14X53", weight: 53, Ag: 15.6, rx: 5.89, ry: 1.92 },
+        { name: "W14X48", weight: 48, Ag: 14.1, rx: 5.85, ry: 1.91 },
+        { name: "W14X43", weight: 43, Ag: 12.6, rx: 5.82, ry: 1.89 },
+        { name: "W14X38", weight: 38, Ag: 11.2, rx: 5.87, ry: 1.55 },
+        { name: "W14X34", weight: 34, Ag: 10.0, rx: 5.83, ry: 1.53 },
+        { name: "W14X30", weight: 30, Ag: 8.85, rx: 5.73, ry: 1.49 },
+        { name: "W14X26", weight: 26, Ag: 7.69, rx: 5.65, ry: 1.08 },
+        { name: "W14X22", weight: 22, Ag: 6.49, rx: 5.54, ry: 1.04 },
+        { name: "W12X336", weight: 336, Ag: 98.9, rx: 6.41, ry: 3.47 },
+        { name: "W12X305", weight: 305, Ag: 89.5, rx: 6.29, ry: 3.42 },
+        { name: "W12X279", weight: 279, Ag: 81.9, rx: 6.16, ry: 3.38 },
+        { name: "W12X252", weight: 252, Ag: 74.1, rx: 6.06, ry: 3.34 },
+        { name: "W12X230", weight: 230, Ag: 67.7, rx: 5.97, ry: 3.31 },
+        { name: "W12X210", weight: 210, Ag: 61.8, rx: 5.89, ry: 3.28 },
+        { name: "W12X190", weight: 190, Ag: 56.0, rx: 5.82, ry: 3.25 },
+        { name: "W12X170", weight: 170, Ag: 50.0, rx: 5.74, ry: 3.22 },
+        { name: "W12X152", weight: 152, Ag: 44.7, rx: 5.66, ry: 3.19 },
+        { name: "W12X136", weight: 136, Ag: 39.9, rx: 5.58, ry: 3.16 },
+        { name: "W12X120", weight: 120, Ag: 35.2, rx: 5.51, ry: 3.13 },
+        { name: "W12X106", weight: 106, Ag: 31.2, rx: 5.47, ry: 3.11 },
+        { name: "W12X96", weight: 96, Ag: 28.2, rx: 5.44, ry: 3.09 },
+        { name: "W12X87", weight: 87, Ag: 25.6, rx: 5.38, ry: 3.07 },
+        { name: "W12X79", weight: 79, Ag: 23.2, rx: 5.34, ry: 3.05 },
+        { name: "W12X72", weight: 72, Ag: 21.1, rx: 5.31, ry: 3.04 },
+        { name: "W12X65", weight: 65, Ag: 19.1, rx: 5.28, ry: 3.02 },
+        { name: "W12X58", weight: 58, Ag: 17.0, rx: 5.28, ry: 2.51 },
+        { name: "W12X53", weight: 53, Ag: 15.6, rx: 5.23, ry: 2.48 },
+        { name: "W12X50", weight: 50, Ag: 14.6, rx: 5.18, ry: 1.96 },
+        { name: "W12X45", weight: 45, Ag: 13.1, rx: 5.15, ry: 1.95 },
+        { name: "W12X40", weight: 40, Ag: 11.7, rx: 5.13, ry: 1.94 },
+        { name: "W12X35", weight: 35, Ag: 10.3, rx: 5.25, ry: 1.54 },
+        { name: "W12X30", weight: 30, Ag: 8.79, rx: 5.21, ry: 1.52 },
+        { name: "W12X26", weight: 26, Ag: 7.65, rx: 5.17, ry: 1.51 },
+        { name: "W12X22", weight: 22, Ag: 6.48, rx: 4.91, ry: 0.848 },
+        { name: "W12X19", weight: 19, Ag: 5.57, rx: 4.82, ry: 0.822 },
+        { name: "W12X16", weight: 16, Ag: 4.71, rx: 4.67, ry: 0.773 },
+        { name: "W12X14", weight: 14, Ag: 4.16, rx: 4.62, ry: 0.753 },
+        { name: "W10X112", weight: 112, Ag: 32.9, rx: 4.66, ry: 2.68 },
+        { name: "W10X100", weight: 100, Ag: 29.3, rx: 4.60, ry: 2.65 },
+        { name: "W10X88", weight: 88, Ag: 26.0, rx: 4.54, ry: 2.63 },
+        { name: "W10X77", weight: 77, Ag: 22.7, rx: 4.49, ry: 2.60 },
+        { name: "W10X68", weight: 68, Ag: 19.9, rx: 4.44, ry: 2.59 },
+        { name: "W10X60", weight: 60, Ag: 17.7, rx: 4.39, ry: 2.57 },
+        { name: "W10X54", weight: 54, Ag: 15.8, rx: 4.37, ry: 2.56 },
+        { name: "W10X49", weight: 49, Ag: 14.4, rx: 4.35, ry: 2.54 },
+        { name: "W10X45", weight: 45, Ag: 13.3, rx: 4.32, ry: 2.01 },
+        { name: "W10X39", weight: 39, Ag: 11.5, rx: 4.27, ry: 1.98 },
+        { name: "W10X33", weight: 33, Ag: 9.71, rx: 4.19, ry: 1.94 },
+        { name: "W10X30", weight: 30, Ag: 8.84, rx: 4.38, ry: 1.37 },
+        { name: "W10X26", weight: 26, Ag: 7.61, rx: 4.35, ry: 1.36 },
+        { name: "W10X22", weight: 22, Ag: 6.49, rx: 4.27, ry: 1.33 },
+        { name: "W10X19", weight: 19, Ag: 5.62, rx: 4.14, ry: 0.874 },
+        { name: "W10X17", weight: 17, Ag: 4.99, rx: 4.05, ry: 0.845 },
+        { name: "W10X15", weight: 15, Ag: 4.41, rx: 3.95, ry: 0.810 },
+        { name: "W10X12", weight: 12, Ag: 3.54, rx: 3.90, ry: 0.785 },
+        { name: "W8X67", weight: 67, Ag: 19.7, rx: 3.72, ry: 2.12 },
+        { name: "W8X58", weight: 58, Ag: 17.1, rx: 3.65, ry: 2.10 },
+        { name: "W8X48", weight: 48, Ag: 14.1, rx: 3.61, ry: 2.08 },
+        { name: "W8X40", weight: 40, Ag: 11.7, rx: 3.53, ry: 2.04 },
+        { name: "W8X35", weight: 35, Ag: 10.3, rx: 3.51, ry: 2.03 },
+        { name: "W8X31", weight: 31, Ag: 9.13, rx: 3.47, ry: 2.02 },
+        { name: "W8X28", weight: 28, Ag: 8.25, rx: 3.45, ry: 1.62 },
+        { name: "W8X24", weight: 24, Ag: 7.08, rx: 3.42, ry: 1.61 },
+        { name: "W8X21", weight: 21, Ag: 6.16, rx: 3.49, ry: 1.26 },
+        { name: "W8X18", weight: 18, Ag: 5.26, rx: 3.43, ry: 1.23 },
+        { name: "W8X15", weight: 15, Ag: 4.44, rx: 3.29, ry: 0.876 },
+        { name: "W8X13", weight: 13, Ag: 3.84, rx: 3.21, ry: 0.843 },
+        { name: "W8X10", weight: 10, Ag: 2.96, rx: 3.22, ry: 0.841 },
+    ];
+
+    window.onload = function() { 
+        populateASTMDropdown(); 
+        populateWShapeDropdown();
+        updateVisualizer(); 
+    };
+
+    function populateWShapeDropdown() {
+        const wSelect = document.getElementById('w_shape_select');
+        wSelect.innerHTML = '';
+        sectionDatabase.forEach((sec, index) => {
+            let option = document.createElement('option');
+            option.value = index; 
+            option.text = sec.name;
+            if (sec.name === "W8x35") option.selected = true; 
+            wSelect.appendChild(option);
+        });
+    }
+
+    function populateASTMDropdown() {
+        const astmSelect = document.getElementById('astm_select');
+        astmSelect.innerHTML = ''; 
+        for (let astm in steelData) {
+            let option = document.createElement('option');
+            option.value = astm;
+            option.text = astm === "Custom" ? "Custom" : `ASTM ${astm}`;
+            if (astm === "A992") option.selected = true; 
+            astmSelect.appendChild(option);
+        }
+        handleASTMChange(); 
+    }
+
+    function handleASTMChange() {
+        const astmSelect = document.getElementById('astm_select');
+        const gradeSelect = document.getElementById('grade_select');
+        const selectedASTM = astmSelect.value;
+        gradeSelect.innerHTML = '';
+
+        if (selectedASTM === "Custom") {
+            let option = document.createElement('option');
+            option.value = "Custom";
+            option.text = "N/A";
+            gradeSelect.appendChild(option);
+            gradeSelect.disabled = true;
+        } else {
+            gradeSelect.disabled = false;
+            const grades = steelData[selectedASTM];
+            for (let grade in grades) {
+                let option = document.createElement('option');
+                option.value = grade;
+                option.text = grade;
+                gradeSelect.appendChild(option);
+            }
+        }
+        handleGradeChange(); 
+    }
+
+    function handleGradeChange() {
+        const astmSelect = document.getElementById('astm_select');
+        const fyInput = document.getElementById('fy_value');
+        if (astmSelect.value === "Custom") {
+            fyInput.readOnly = false;
+        } else {
+            fyInput.readOnly = true;
+            fyInput.value = steelData[astmSelect.value][document.getElementById('grade_select').value];
+        }
+    }
+
+    function resolveOverlap(labels, spacing) {
+        labels.sort((a,b) => a.rawY - b.rawY);
+        labels.forEach(l => l.adjY = l.rawY);
+        for(let iter=0; iter<5; iter++) { 
+            for(let i=0; i<labels.length-1; i++) {
+                let diff = labels[i+1].adjY - labels[i].adjY;
+                if(diff < spacing) {
+                    let overlap = spacing - diff;
+                    labels[i].adjY -= overlap / 2;
+                    labels[i+1].adjY += overlap / 2;
+                }
+            }
+        }
+    }
+
+    function updateVisualizer() {
+        const svgContainer = document.getElementById('visualizer-svg-container');
+        let totalLength = parseFloat(document.getElementById('total-length').value) || 10;
+        const baseCondition = document.getElementById('base_condition').value;
+
+        let braces = [];
+        document.querySelectorAll('.segment-row').forEach(row => {
+            let elev = parseFloat(row.querySelector('.brace-elev').value);
+            let K = parseFloat(row.querySelector('.k-factor-dropdown').value);
+            let axis = row.querySelector('.axis-dropdown').value;
+            if (!isNaN(elev) && elev > 0 && elev <= totalLength) {
+                braces.push({ elev, K, axis });
+            }
+        });
+        braces.sort((a,b) => a.elev - b.elev);
+
+        const svgWidth = 400; const svgHeight = 400;
+        const colX = 200; const topY = 40; const baseY = 360;
+        const pixelPerFt = (baseY - topY) / totalLength;
+
+        let svgHTML = `<svg viewBox="0 0 ${svgWidth} ${svgHeight}" width="100%" height="100%">`;
+
+        svgHTML += `<line x1="${colX}" y1="${topY}" x2="${colX}" y2="${baseY}" stroke="var(--accent-cyan)" stroke-width="6" stroke-linecap="round" style="filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.5));"/>`;
+
+        if (baseCondition === 'Fixed') {
+            svgHTML += `<line x1="${colX-25}" y1="${baseY+3}" x2="${colX+25}" y2="${baseY+3}" stroke="var(--text-main)" stroke-width="3"/>`;
+            for(let i=-20; i<=20; i+=10) {
+                svgHTML += `<line x1="${colX+i}" y1="${baseY+3}" x2="${colX+i-10}" y2="${baseY+13}" stroke="var(--text-label)" stroke-width="2"/>`;
+            }
+        } else if (baseCondition === 'Pinned') {
+            svgHTML += `<polygon points="${colX},${baseY} ${colX-15},${baseY+15} ${colX+15},${baseY+15}" fill="none" stroke="var(--text-main)" stroke-width="2"/>`;
+            svgHTML += `<line x1="${colX-25}" y1="${baseY+15}" x2="${colX+25}" y2="${baseY+15}" stroke="var(--text-main)" stroke-width="2"/>`;
+        }
+
+        let rightLabels = [];
+        rightLabels.push({ rawY: baseY, text: `Base (0 ft)`, isBase: true });
+        
+        braces.forEach(b => {
+            let isTop = (b.elev === totalLength);
+            let text = isTop ? `@ ${b.elev.toFixed(1)} ft (Top)` : `@ ${b.elev.toFixed(1)} ft`;
+            rightLabels.push({ rawY: baseY - b.elev * pixelPerFt, text: text, isTop: isTop });
+        });
+        
+        if (!braces.some(b => b.elev === totalLength)) {
+            rightLabels.push({ rawY: topY, text: `@ ${totalLength.toFixed(1)} ft (Top)`, isTop: true });
+        }
+
+        let leftLabels = [];
+        let allPoints = [0];
+        braces.forEach(b => { if(!allPoints.includes(b.elev)) allPoints.push(b.elev); });
+        if (!allPoints.includes(totalLength)) allPoints.push(totalLength);
+        allPoints.sort((a,b) => a - b);
+        
+        for(let i=1; i<allPoints.length; i++) {
+            let midElev = (allPoints[i] + allPoints[i-1]) / 2;
+            let L = allPoints[i] - allPoints[i-1];
+            let rawY = baseY - midElev * pixelPerFt;
+            leftLabels.push({ rawY, text: `L = ${L.toFixed(1)} ft` });
+        }
+
+        resolveOverlap(rightLabels, 20);
+        resolveOverlap(leftLabels, 20);
+
+        svgHTML += `<line x1="${colX-10}" y1="${topY}" x2="${colX+10}" y2="${topY}" stroke="var(--text-main)" stroke-width="2"/>`;
+        
+        braces.forEach(b => {
+            let y = baseY - b.elev * pixelPerFt;
+            svgHTML += `<line x1="${colX-10}" y1="${y}" x2="${colX+10}" y2="${y}" stroke="var(--text-main)" stroke-width="2"/>`;
+
+            if(b.axis === 'X' || b.axis === 'Both') {
+                if(b.K === 1.0) { 
+                    svgHTML += `<polygon points="${colX-10},${y} ${colX-25},${y-8} ${colX-25},${y+8}" fill="var(--text-main)"/>`;
+                } else { 
+                    svgHTML += `<circle cx="${colX-15}" cy="${y}" r="5" fill="var(--text-main)"/>`;
+                }
+            }
+            if(b.axis === 'Y' || b.axis === 'Both') {
+                if(b.K === 1.0) { 
+                    svgHTML += `<polygon points="${colX+10},${y} ${colX+25},${y-8} ${colX+25},${y+8}" fill="var(--text-main)"/>`;
+                } else { 
+                    svgHTML += `<circle cx="${colX+15}" cy="${y}" r="5" fill="var(--text-main)"/>`;
+                }
+            }
+        });
+
+        rightLabels.forEach(l => {
+            svgHTML += `<polyline points="${colX+30},${l.rawY} ${colX+45},${l.rawY} ${colX+55},${l.adjY} ${colX+65},${l.adjY}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="3,3"/>`;
+            let color = l.isBase ? "var(--text-label)" : "var(--accent-orange)";
+            let weight = l.isBase ? "normal" : "bold";
+            svgHTML += `<text x="${colX+70}" y="${l.adjY + 4}" fill="${color}" font-size="12" font-weight="${weight}">${l.text}</text>`;
+        });
+
+        leftLabels.forEach(l => {
+            svgHTML += `<polyline points="${colX-30},${l.rawY} ${colX-45},${l.rawY} ${colX-55},${l.adjY} ${colX-65},${l.adjY}" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="3,3"/>`;
+            svgHTML += `<text x="${colX-70}" y="${l.adjY + 4}" fill="var(--text-label)" font-size="12" text-anchor="end">${l.text}</text>`;
+        });
+
+        svgHTML += `</svg>`;
+        svgContainer.innerHTML = svgHTML;
+    }
+
+    function addSegment() {
+        const container = document.getElementById('segments-container');
+        const segmentDiv = document.createElement('div');
+        segmentDiv.className = 'segment-row';
+        segmentDiv.innerHTML = `
+            <input type="number" class="brace-elev" placeholder="Elev from 0 (ft)" value="" step="0.1" onchange="sortSegmentsAndUpdate()">
+            <select class="k-factor-dropdown" onchange="updateVisualizer()">
+                <option value="1.0" data-desc="Pinned - Pinned">K = 1.0 (Pinned)</option>
+                <option value="0.65" data-desc="Fixed - Fixed">K = 0.65 (Fixed-Fixed)</option>
+                <option value="0.8" data-desc="Fixed - Pinned">K = 0.8 (Fixed-Pinned)</option>
+                <option value="1.2" data-desc="Sway">K = 1.2 (Sway)</option>
+                <option value="2.1" data-desc="Cantilever">K = 2.1 (Cantilever)</option>
+            </select>
+            <select class="axis-dropdown" onchange="updateVisualizer()">
+                <option value="Both">Both Axes</option>
+                <option value="X">X-Axis (Left)</option>
+                <option value="Y">Y-Axis (Right)</option>
+            </select>
+            <button class="btn-remove" onclick="removeSegment(this)">X</button>
+        `;
+        container.appendChild(segmentDiv);
+        updateVisualizer(); 
+    }
+
+    function removeSegment(btn) {
+        btn.parentElement.remove();
+        updateVisualizer(); 
+    }
+
+    function sortSegmentsAndUpdate() {
+        const container = document.getElementById('segments-container');
+        const rows = Array.from(container.querySelectorAll('.segment-row'));
+        
+        rows.sort((a, b) => {
+            const valA = parseFloat(a.querySelector('.brace-elev').value) || 0;
+            const valB = parseFloat(b.querySelector('.brace-elev').value) || 0;
+            return valA - valB;
+        });
+        
+        rows.forEach(row => container.appendChild(row));
+        updateVisualizer();
+    }
+
+    function calculate() {
+        const method = document.getElementById('method').value;
+        const E = 29000; 
+        
+        const sectionIndex = document.getElementById('w_shape_select').value;
+        const section = sectionDatabase[sectionIndex];
+
+        const astmVal = document.getElementById('astm_select').value;
+        const gradeVal = document.getElementById('grade_select').value;
+        let displaySteelName = astmVal === "Custom" ? "Custom Steel Grade" : `ASTM ${astmVal}`;
+        const Fy = parseFloat(document.getElementById('fy_value').value); 
+
+        let totalLength = parseFloat(document.getElementById('total-length').value) || 0;
+
+        if (isNaN(Fy) || Fy <= 0 || totalLength <= 0) {
+            alert("Please ensure Yield Strength and Total Length are valid positive numbers.");
+            return;
+        }
+
+        let allBraces = [];
+        let tableData = []; 
+
+        document.querySelectorAll('.segment-row').forEach(row => {
+            let elev = parseFloat(row.querySelector('.brace-elev').value);
+            let kDropdown = row.querySelector('.k-factor-dropdown');
+            let K = parseFloat(kDropdown.value);
+            let kDesc = kDropdown.options[kDropdown.selectedIndex].getAttribute('data-desc') || "Pinned - Pinned";
+            let axis = row.querySelector('.axis-dropdown').value;
+            
+            if (!isNaN(elev) && elev > 0 && elev <= totalLength) {
+                allBraces.push({ elev, K, axis, kDesc });
+            }
+        });
+        allBraces.sort((a,b) => a.elev - b.elev);
+
+        let maxKLx = 0; let maxKLy = 0;
+
+        let bracesX = allBraces.filter(b => b.axis === 'X' || b.axis === 'Both');
+        if (!bracesX.some(b => b.elev === totalLength)) { bracesX.push({ elev: totalLength, K: 1.0, axis: 'X', kDesc: "Pinned - Pinned" }); }
+        let prevX = 0;
+        bracesX.forEach((b, idx) => {
+            let L = b.elev - prevX;
+            let KL = b.K * L * 12; 
+            if (KL > maxKLx) maxKLx = KL;
+            tableData.push({ element: `Element ${idx + 1}`, length: L, axis: 'X', kDesc: b.kDesc, kVal: b.K, KL: KL });
+            prevX = b.elev;
+        });
+
+        let bracesY = allBraces.filter(b => b.axis === 'Y' || b.axis === 'Both');
+        if (!bracesY.some(b => b.elev === totalLength)) { bracesY.push({ elev: totalLength, K: 1.0, axis: 'Y', kDesc: "Pinned - Pinned" }); }
+        let prevY = 0;
+        bracesY.forEach((b, idx) => {
+            let L = b.elev - prevY;
+            let KL = b.K * L * 12; 
+            if (KL > maxKLy) maxKLy = KL;
+            tableData.push({ element: `Element ${idx + 1}`, length: L, axis: 'Y', kDesc: b.kDesc, kVal: b.K, KL: KL });
+            prevY = b.elev;
+        });
+
+        let slendernessX = maxKLx / section.rx;
+        let slendernessY = maxKLy / section.ry;
+        
+        let gov_slenderness = 0; let axisCtrl = "Y";
+
+        if (maxKLx <= maxKLy) {
+            gov_slenderness = slendernessY; axisCtrl = "Y";
+        } else {
+            let KLeff = maxKLx / (section.rx / section.ry);
+            if (KLeff > maxKLy) { gov_slenderness = KLeff / section.ry; axisCtrl = "X"; } 
+            else { gov_slenderness = maxKLy / section.ry; axisCtrl = "Y"; }
+        }
+
+        let Fe = (Math.pow(Math.PI, 2) * E) / Math.pow(gov_slenderness, 2);
+        let lambda_c = 4.71 * Math.sqrt(E / Fy);
+        let Fcr = gov_slenderness <= lambda_c ? Math.pow(0.658, (Fy / Fe)) * Fy : 0.877 * Fe;
+        
+        let Pn = Fcr * section.Ag;
+        let capacity = method === "LRFD" ? 0.9 * Pn : Pn / 1.67; 
+        
+        let limitWarning = gov_slenderness > 200 ? `<br><span style="color:var(--danger-red); font-size: 0.9rem;">SLENDERNESS LIMIT EXCEEDED (>200)</span>` : '';
+
+        const wrapper = document.getElementById('results-wrapper');
+        
+        let tableHTML = "";
+        tableData.forEach(row => {
+            tableHTML += `
+                <tr>
+                    <td>${row.element}</td>
+                    <td>${row.length.toFixed(2)}</td>
+                    <td>${row.axis}</td>
+                    <td>${row.kDesc}</td>
+                    <td>${row.kVal.toFixed(2)}</td>
+                    <td class="val-cyan">${row.KL.toFixed(1)}</td>
+                </tr>
+            `;
+        });
+
+        wrapper.innerHTML = `
+            <div class="results-panel">
+                
+                <div class="result-card">
+                    <div class="summary-header">Analysis Summary</div>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Steel Grade</span>
+                            <span class="summary-value">${displaySteelName} Fy=${Fy}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Max (KL)x</span>
+                            <span class="summary-value val-yellow">${maxKLx.toFixed(1)} in</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Max (KL)y</span>
+                            <span class="summary-value val-yellow">${maxKLy.toFixed(1)} in</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Controlling</span>
+                            <span class="summary-value">(KL)${axisCtrl.toLowerCase()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-card k-factor-panel">
+                    <div class="summary-header">Elements with K Factors</div>
+                    <table class="k-table">
+                        <thead>
+                            <tr>
+                                <th>Element</th>
+                                <th>Length (ft)</th>
+                                <th>Axis</th>
+                                <th>K Factor</th>
+                                <th>K Value</th>
+                                <th>(KL) (in)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableHTML}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="result-card analyzed-section-panel">
+                    <div class="section-subtitle">ANALYZED SECTION</div>
+                    <div class="section-title">${section.name}</div>
+                    <div class="section-props">Fy=${Fy} ksi | rx/ry=${(section.rx/section.ry).toFixed(2)} | ${axisCtrl} controls</div>
+                    
+                    <div class="section-stats-grid">
+                        <div class="stat-item">
+                            <span class="summary-label">KL/r</span>
+                            <span class="stat-val val-cyan">${gov_slenderness.toFixed(1)}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="summary-label">Capacity</span>
+                            <span class="stat-val val-green">${capacity.toFixed(1)} kips</span>
+                        </div>
+                    </div>
+                    ${limitWarning}
+                </div>
+
+            </div>
+        `;
+
+        const printDiv = document.getElementById('print-report');
+        printDiv.innerHTML = `
+            <div class="print-header">
+                <h1>STEEL ANALYSIS REPORT</h1>
+                <h2>AXIAL COMPRESSION</h2>
+            </div>
+            
+            <h3>1. Input Parameters</h3>
+            <table class="print-table">
+                <tr><th>Analyzed Section</th><td>${section.name} (Ag = ${section.Ag} in², rx = ${section.rx} in, ry = ${section.ry} in)</td></tr>
+                <tr><th>Material Grade</th><td>${displaySteelName}, Fy = ${Fy} ksi</td></tr>
+                <tr><th>Design Method</th><td>${method}</td></tr>
+                <tr><th>Total Column Length</th><td>${totalLength.toFixed(1)} ft</td></tr>
+            </table>
+
+            <h3>2. Unbraced Segments & K-Factors</h3>
+            <table class="print-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Element</th>
+                        <th style="width: 15%;">Length (ft)</th>
+                        <th style="width: 15%;">Axis</th>
+                        <th style="width: 20%;">K Factor Desc.</th>
+                        <th style="width: 15%;">K Value</th>
+                        <th style="width: 15%;">(KL) (in)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableHTML}
+                </tbody>
+            </table>
+
+            <h3>3. Analysis Results</h3>
+            <table class="print-table">
+                <tr><th>Maximum (KL)x</th><td>${maxKLx.toFixed(1)} in</td></tr>
+                <tr><th>Maximum (KL)y</th><td>${maxKLy.toFixed(1)} in</td></tr>
+                <tr><th>Controlling Axis</th><td>${axisCtrl}</td></tr>
+                <tr><th>Controlling Slenderness (KL/r)</th><td>${gov_slenderness.toFixed(1)} ${gov_slenderness > 200 ? ' (EXCEEDS LIMIT OF 200)' : ''}</td></tr>
+                <tr><th>Nominal Compressive Strength (Pn)</th><td>${Pn.toFixed(1)} kips</td></tr>
+                <tr><th>Available Capacity (${method})</th><td><strong>${capacity.toFixed(1)} kips</strong></td></tr>
+            </table>
+        `;
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+</script>
+</body>
+</html>

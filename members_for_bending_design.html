@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Design - Continuous Beams</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* --- Boot-Up Animation Styles --- */
+        #boot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-page); /* Matches your dark background */
+            z-index: 9999; /* Keeps it above everything else */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+
+        .boot-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .boot-line {
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            animation: load-line 1.8s ease-in-out forwards;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.6)); transform: scale(1.02); }
+        }
+
+        @keyframes load-line {
+            0% { width: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 300px; opacity: 1; }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        /* Ensure it doesn't show up when printing */
+        @media print {
+            #boot-overlay { display: none !important; }
+        }
+        /* --- End Boot-Up Animation Styles --- */
+        /* --- Back Button Styles --- */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: #3b82f6; 
+            transform: translateX(-3px); 
+        }
+
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15); /* Cyan glow */
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12); /* Orange glow */
+        }
+
+        /* Main Glass Container */
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 900px; 
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+
+        /* Grid Layouts */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; margin-bottom: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        
+        label { font-size: 0.85rem; color: var(--text-label); font-weight: 500; }
+
+        /* Glass Inputs */
+        input, select {
+            background-color: var(--glass-input);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input[readonly], select:disabled {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+            box-shadow: none;
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px top 50%;
+            background-size: 10px auto;
+            padding-right: 35px;
+        }
+        
+        select option { background-color: #111827; color: white; }
+
+        input:focus:not([readonly]), select:focus { 
+            outline: none; 
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        /* Buttons */
+        .btn-calculate {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+            margin-top: 25px;
+        }
+        .btn-calculate:hover { 
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            width: 100%;
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-1px); }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger-red);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        .btn-danger:hover { background: var(--danger-red); color: white; box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
+
+        /* Result Panel & Action Buttons */
+        .action-buttons {
+            display: flex; gap: 15px; margin-top: 20px;
+        }
+        .action-buttons button {
+            flex: 1; padding: 14px; font-weight: bold; font-size: 1rem; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; margin-top: 0; backdrop-filter: blur(5px);
+        }
+        .btn-print { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .btn-print:hover { background: var(--accent-green); color: #040914; transform: translateY(-2px); }
+        .btn-reset { background: rgba(239, 68, 68, 0.1); color: var(--danger-red); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-reset:hover { background: var(--danger-red); color: white; transform: translateY(-2px); }
+
+        .section-title {
+            margin-top: 35px; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 10px; color: var(--accent-cyan); font-size: 1.15rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        canvas {
+            background-color: rgba(0, 0, 0, 0.2); 
+            border: 1px solid var(--glass-border);
+            border-radius: 12px; 
+            width: 100%; 
+            margin-top: 20px;
+            box-sizing: border-box;
+            backdrop-filter: blur(5px);
+        }
+
+        #results {
+            margin-top: 35px; padding: 30px; 
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border); 
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; 
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Item Chips */
+        .item-list {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; margin-bottom: 20px;
+        }
+        .item-chip {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+            padding: 8px 14px; border-radius: 20px; font-size: 0.85rem; 
+            display: flex; align-items: center; gap: 10px; border: 1px solid var(--glass-border); color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .item-chip button {
+            background: rgba(239, 68, 68, 0.2); color: var(--danger-red); border: 1px solid rgba(239, 68, 68, 0.4); 
+            border-radius: 50%; width: 22px; height: 22px; padding: 0; cursor: pointer; font-weight: bold; 
+            margin: 0; font-size: 11px; display: flex; justify-content: center; align-items: center; transition: all 0.2s;
+        }
+        .item-chip button:hover { background: var(--danger-red); color: white; }
+    </style>
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL DESIGN</div>
+        <div class="boot-line"></div>
+    </div>
+<a href="index.html" class="back-btn">← Back to Home</a>
+
+<div class="bg-blob blob-1"></div>
+<div class="bg-blob blob-2"></div>
+
+<div class="calculator-container" id="mainContainer">
+    <div class="header">
+        <h1>STEEL DESIGN</h1>
+        <span class="badge">BEAMS</span>
+    </div>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Design Method</label>
+            <select id="method" onchange="updateCanvas()">
+                <option value="LRFD">LRFD</option>
+                <option value="ASD">ASD</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Steel Type (ASTM)</label>
+            <select id="steelBaseType" onchange="updateGrades()"></select>
+        </div>
+    </div>
+    <div class="grid-2">
+        <div class="form-group" id="steelGradeGroup" style="display:none;">
+            <label>Specific Grade</label>
+            <select id="steelSpecificGrade" onchange="updateFy()"></select>
+        </div>
+        <div class="form-group">
+            <label>Yield Strength, Fy (ksi)</label>
+            <input type="number" id="fy" value="50" readonly>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Consider Serviceability (Deflection)?</label>
+            <select id="checkServiceability" onchange="toggleServiceability()">
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+            </select>
+        </div>
+        <div class="form-group" id="deflectionLimitGroup" style="display:none;">
+            <label>Deflection Limit (L / x)</label>
+            <input type="number" id="deflectionLimit" value="360" placeholder="e.g. 360">
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Are Max Moment & Deflection already given?</label>
+            <select id="givenForces" onchange="toggleGivenForces()">
+                <option value="no">No, help me solve it</option>
+                <option value="yes">Yes</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Consider Self-Weight in Final Check?</label>
+            <select id="considerSelfWeight">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="givenForcesPanel" style="display:none;">
+        <h3 class="section-title">Given Data</h3>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Factored Max Moment (kip-ft)</label>
+                <input type="number" id="givenMoment" value="0">
+            </div>
+            <div class="form-group" id="givenDeflectionGroup" style="display:none;">
+                <label>Actual Max Deflection (feet)</label>
+                <input type="number" id="givenDeflection" value="0">
+            </div>
+        </div>
+    </div>
+
+    <div id="solverPanel">
+        <h3 class="section-title">Beam Solver</h3>
+        
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Total Beam Length (ft)</label>
+                <input type="number" id="beamLength" value="20" onchange="updateCanvas()">
+            </div>
+            <div class="form-group">
+                <label>Add Support</label>
+                <div style="display:flex; gap:10px;">
+                    <select id="supportType" style="flex:1;">
+                        <option value="pin">Pin</option>
+                        <option value="roller">Roller</option>
+                        <option value="cantilever">Cantilever (Fixed End)</option>
+                    </select>
+                    <input type="number" id="supportPos" placeholder="Pos (ft)" style="flex:1;">
+                    <button class="btn-secondary" onclick="addSupport()" style="margin:0; width:auto; padding: 0 20px;">Add</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="supportList" class="item-list"></div>
+        
+        <h4 style="margin-top: 15px; margin-bottom: 5px; color: var(--accent-cyan); text-transform: uppercase; font-size: 0.9rem; letter-spacing: 1px;">Add Loading</h4>
+        <div class="grid-2" style="margin-bottom: 10px;">
+            <div class="form-group">
+                <label>Load Type</label>
+                <select id="loadType" onchange="updateLoadUI()">
+                    <option value="point">Point Load</option>
+                    <option value="uniform">Uniform Load</option>
+                    <option value="triangular">Triangular / Trapezoidal Load</option>
+                    <option value="moment">Concentrated Moment</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Load Entry Method</label>
+                <select id="loadEntry" onchange="updateLoadUI()">
+                    <option value="separate">Separate Dead & Live</option>
+                    <option value="combined">Already Combined / Factored</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="dynamicLoadInputs"></div>
+        <button class="btn-secondary" onclick="addLoad()" style="margin-top: 10px;">Add Load to Beam</button>
+
+        <div id="loadList" class="item-list"></div>
+
+        <canvas id="beamCanvas" width="800" height="250"></canvas>
+        <button class="btn-secondary btn-danger" onclick="clearBeam()" style="width: auto; margin-top: 15px;">Clear All Data</button>
+    </div>
+
+    <button class="btn-calculate" onclick="calculateDesign()" id="calcBtn">Calculate Result</button>
+
+    <div id="results">
+        <h3 class="section-title" style="margin-top:0;">Design Results</h3>
+        <div id="outputLog" style="line-height: 1.8; overflow-x: auto; color: white;"></div>
+        
+        <div class="action-buttons">
+            <button onclick="printReport()" id="printBtn" class="btn-print">🖨️ Print / Save PDF</button>
+            <button onclick="solveAgain()" id="resetBtn" class="btn-reset">🔄 Solve Again</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Boot-Up Animation Trigger ---
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const overlay = document.getElementById('boot-overlay');
+            if (overlay) {
+                overlay.classList.add('hide-boot');
+            }
+        }, 1800); // 1.8 second delay before revealing the site
+    });
+    // --- DATABASES ---
+    const steelGroups = {
+        "A992": [{grade: "-", fy: 50}],
+        "A36": [{grade: "-", fy: 36}],
+        "A53": [{grade: "Gr. B", fy: 35}],
+        "A500": [{grade: "Gr. B", fy: 42}, {grade: "Gr. C", fy: 46}],
+        "A501": [{grade: "Gr. A", fy: 36}, {grade: "Gr. B", fy: 50}],
+        "A529": [{grade: "Gr. 50", fy: 50}, {grade: "Gr. 55", fy: 55}],
+        "A572": [{grade: "Gr. 42", fy: 42}, {grade: "Gr. 50", fy: 50}, {grade: "Gr. 55", fy: 55}, {grade: "Gr. 60", fy: 60}, {grade: "Gr. 65", fy: 65}],
+        "A588": [{grade: "-", fy: 50}],
+        "A618": [{grade: "Gr. I, II", fy: 50}, {grade: "Gr. III", fy: 50}],
+        "A709": [{grade: "36", fy: 36}, {grade: "50", fy: 50}, {grade: "50S", fy: 50}, {grade: "50W", fy: 50}],
+        "A847": [{grade: "-", fy: 50}],
+        "A913": [{grade: "50", fy: 50}, {grade: "60", fy: 60}, {grade: "65", fy: 65}, {grade: "70", fy: 70}],
+        "A1043": [{grade: "36", fy: 36}, {grade: "50", fy: 50}],
+        "A1065": [{grade: "Gr. 50", fy: 50}, {grade: "Gr. 50W", fy: 50}],
+        "A1085": [{grade: "Gr. A", fy: 50}]
+    };
+
+    const shapeDatabase = [
+        {name: 'W36x925', weight: 925.0, Zx: 4130.0, Ix: 73000.0}, {name: 'W36x853', weight: 853.0, Zx: 3920.0, Ix: 70000.0},
+        {name: 'W36x802', weight: 802.0, Zx: 3660.0, Ix: 64800.0}, {name: 'W36x723', weight: 723.0, Zx: 3270.0, Ix: 57300.0},
+        {name: 'W40x655', weight: 655.0, Zx: 3080.0, Ix: 56500.0}, {name: 'W36x652', weight: 652.0, Zx: 2910.0, Ix: 50600.0},
+        {name: 'W40x593', weight: 593.0, Zx: 2760.0, Ix: 50400.0}, {name: 'W36x529', weight: 529.0, Zx: 2330.0, Ix: 39600.0},
+        {name: 'W40x503', weight: 503.0, Zx: 2320.0, Ix: 41600.0}, {name: 'W36x487', weight: 487.0, Zx: 2130.0, Ix: 36000.0},
+        {name: 'W14x873', weight: 873.0, Zx: 2030.0, Ix: 18100.0}, {name: 'W40x431', weight: 431.0, Zx: 1960.0, Ix: 34800.0},
+        {name: 'W36x441', weight: 441.0, Zx: 1910.0, Ix: 32100.0}, {name: 'W27x539', weight: 539.0, Zx: 1890.0, Ix: 25600.0},
+        {name: 'W14x808', weight: 808.0, Zx: 1830.0, Ix: 15900.0}, {name: 'W40x397', weight: 397.0, Zx: 1800.0, Ix: 32000.0},
+        {name: 'W40x392', weight: 392.0, Zx: 1710.0, Ix: 29900.0}, {name: 'W36x395', weight: 395.0, Zx: 1710.0, Ix: 28500.0},
+        {name: 'W40x372', weight: 372.0, Zx: 1680.0, Ix: 29600.0}, {name: 'W14x730', weight: 730.0, Zx: 1660.0, Ix: 14300.0},
+        {name: 'W40x362', weight: 362.0, Zx: 1640.0, Ix: 28900.0}, {name: 'W44x335', weight: 335.0, Zx: 1620.0, Ix: 31100.0},
+        {name: 'W33x387', weight: 387.0, Zx: 1560.0, Ix: 24300.0}, {name: 'W36x361', weight: 361.0, Zx: 1550.0, Ix: 25700.0},
+        {name: 'W14x665', weight: 665.0, Zx: 1480.0, Ix: 12400.0}, {name: 'W40x324', weight: 324.0, Zx: 1460.0, Ix: 25600.0},
+        {name: 'W30x391', weight: 391.0, Zx: 1450.0, Ix: 20700.0}, {name: 'W40x331', weight: 331.0, Zx: 1430.0, Ix: 24700.0},
+        {name: 'W33x354', weight: 354.0, Zx: 1420.0, Ix: 22000.0}, {name: 'W44x290', weight: 290.0, Zx: 1410.0, Ix: 27000.0},
+        {name: 'W40x327', weight: 327.0, Zx: 1410.0, Ix: 24500.0}, {name: 'W36x330', weight: 330.0, Zx: 1410.0, Ix: 23300.0},
+        {name: 'W40x297', weight: 297.0, Zx: 1330.0, Ix: 23200.0}, {name: 'W30x357', weight: 357.0, Zx: 1320.0, Ix: 18700.0},
+        {name: 'W14x605', weight: 605.0, Zx: 1320.0, Ix: 10800.0}, {name: 'W36x302', weight: 302.0, Zx: 1280.0, Ix: 21100.0},
+        {name: 'W44x262', weight: 262.0, Zx: 1270.0, Ix: 24100.0}, {name: 'W40x294', weight: 294.0, Zx: 1270.0, Ix: 21900.0},
+        {name: 'W33x318', weight: 318.0, Zx: 1270.0, Ix: 19500.0}, {name: 'W40x277', weight: 277.0, Zx: 1250.0, Ix: 21900.0},
+        {name: 'W27x368', weight: 368.0, Zx: 1240.0, Ix: 16200.0}, {name: 'W40x278', weight: 278.0, Zx: 1190.0, Ix: 20500.0},
+        {name: 'W36x282', weight: 282.0, Zx: 1190.0, Ix: 19600.0}, {name: 'W30x326', weight: 326.0, Zx: 1190.0, Ix: 16800.0},
+        {name: 'W14x550', weight: 550.0, Zx: 1180.0, Ix: 9430.0}, {name: 'W33x291', weight: 291.0, Zx: 1160.0, Ix: 17700.0},
+        {name: 'W40x264', weight: 264.0, Zx: 1130.0, Ix: 19400.0}, {name: 'W27x336', weight: 336.0, Zx: 1130.0, Ix: 14600.0},
+        {name: 'W24x370', weight: 370.0, Zx: 1130.0, Ix: 13400.0}, {name: 'W40x249', weight: 249.0, Zx: 1120.0, Ix: 19600.0},
+        {name: 'W44x230', weight: 230.0, Zx: 1100.0, Ix: 20800.0}, {name: 'W36x262', weight: 262.0, Zx: 1100.0, Ix: 17900.0},
+        {name: 'W30x292', weight: 292.0, Zx: 1060.0, Ix: 14900.0}, {name: 'W14x500', weight: 500.0, Zx: 1050.0, Ix: 8210.0},
+        {name: 'W36x256', weight: 256.0, Zx: 1040.0, Ix: 16800.0}, {name: 'W33x263', weight: 263.0, Zx: 1040.0, Ix: 15900.0},
+        {name: 'W36x247', weight: 247.0, Zx: 1030.0, Ix: 16700.0}, {name: 'W27x307', weight: 307.0, Zx: 1030.0, Ix: 13100.0},
+        {name: 'W24x335', weight: 335.0, Zx: 1020.0, Ix: 11900.0}, {name: 'W40x235', weight: 235.0, Zx: 1010.0, Ix: 17400.0},
+        {name: 'W40x215', weight: 215.0, Zx: 964.0, Ix: 16700.0}, {name: 'W36x231', weight: 231.0, Zx: 963.0, Ix: 15600.0},
+        {name: 'W30x261', weight: 261.0, Zx: 943.0, Ix: 13100.0}, {name: 'W33x241', weight: 241.0, Zx: 940.0, Ix: 14200.0},
+        {name: 'W36x232', weight: 232.0, Zx: 936.0, Ix: 15000.0}, {name: 'W27x281', weight: 281.0, Zx: 936.0, Ix: 11900.0},
+        {name: 'W14x455', weight: 455.0, Zx: 936.0, Ix: 7190.0}, {name: 'W24x306', weight: 306.0, Zx: 922.0, Ix: 10700.0},
+        {name: 'W40x211', weight: 211.0, Zx: 906.0, Ix: 15500.0}, {name: 'W40x199', weight: 199.0, Zx: 869.0, Ix: 14900.0},
+        {name: 'W14x426', weight: 426.0, Zx: 869.0, Ix: 6600.0}, {name: 'W33x221', weight: 221.0, Zx: 857.0, Ix: 12900.0},
+        {name: 'W27x258', weight: 258.0, Zx: 852.0, Ix: 10800.0}, {name: 'W30x235', weight: 235.0, Zx: 847.0, Ix: 11700.0},
+        {name: 'W24x279', weight: 279.0, Zx: 835.0, Ix: 9600.0}, {name: 'W36x210', weight: 210.0, Zx: 833.0, Ix: 13200.0},
+        {name: 'W14x398', weight: 398.0, Zx: 801.0, Ix: 6000.0}, {name: 'W40x183', weight: 183.0, Zx: 774.0, Ix: 13200.0},
+        {name: 'W33x201', weight: 201.0, Zx: 773.0, Ix: 11600.0}, {name: 'W27x235', weight: 235.0, Zx: 772.0, Ix: 9700.0},
+        {name: 'W36x194', weight: 194.0, Zx: 767.0, Ix: 12100.0}, {name: 'W18x311', weight: 311.0, Zx: 754.0, Ix: 6970.0},
+        {name: 'W30x211', weight: 211.0, Zx: 751.0, Ix: 10300.0}, {name: 'W21x275', weight: 275.0, Zx: 749.0, Ix: 7690.0},
+        {name: 'W24x250', weight: 250.0, Zx: 744.0, Ix: 8490.0}, {name: 'W14x370', weight: 370.0, Zx: 736.0, Ix: 5440.0},
+        {name: 'W36x182', weight: 182.0, Zx: 718.0, Ix: 11300.0}, {name: 'W27x217', weight: 217.0, Zx: 711.0, Ix: 8910.0},
+        {name: 'W40x167', weight: 167.0, Zx: 693.0, Ix: 11600.0}, {name: 'W18x283', weight: 283.0, Zx: 676.0, Ix: 6170.0},
+        {name: 'W30x191', weight: 191.0, Zx: 675.0, Ix: 9200.0}, {name: 'W24x229', weight: 229.0, Zx: 675.0, Ix: 7650.0},
+        {name: 'W14x342', weight: 342.0, Zx: 672.0, Ix: 4900.0}, {name: 'W21x248', weight: 248.0, Zx: 671.0, Ix: 6830.0},
+        {name: 'W36x170', weight: 170.0, Zx: 668.0, Ix: 10500.0}, {name: 'W27x194', weight: 194.0, Zx: 631.0, Ix: 7860.0},
+        {name: 'W33x169', weight: 169.0, Zx: 629.0, Ix: 9290.0}, {name: 'W36x160', weight: 160.0, Zx: 624.0, Ix: 9760.0},
+        {name: 'W18x258', weight: 258.0, Zx: 611.0, Ix: 5510.0}, {name: 'W30x173', weight: 173.0, Zx: 607.0, Ix: 8230.0},
+        {name: 'W24x207', weight: 207.0, Zx: 606.0, Ix: 6820.0}, {name: 'W14x311', weight: 311.0, Zx: 603.0, Ix: 4330.0},
+        {name: 'W12x336', weight: 336.0, Zx: 603.0, Ix: 4060.0}, {name: 'W21x223', weight: 223.0, Zx: 601.0, Ix: 6080.0},
+        {name: 'W40x149', weight: 149.0, Zx: 598.0, Ix: 9800.0}, {name: 'W36x150', weight: 150.0, Zx: 581.0, Ix: 9040.0},
+        {name: 'W27x178', weight: 178.0, Zx: 570.0, Ix: 7020.0}, {name: 'W33x152', weight: 152.0, Zx: 559.0, Ix: 8160.0},
+        {name: 'W24x192', weight: 192.0, Zx: 559.0, Ix: 6260.0}, {name: 'W18x234', weight: 234.0, Zx: 549.0, Ix: 4900.0},
+        {name: 'W14x283', weight: 283.0, Zx: 542.0, Ix: 3840.0}, {name: 'W12x305', weight: 305.0, Zx: 537.0, Ix: 3550.0},
+        {name: 'W21x201', weight: 201.0, Zx: 530.0, Ix: 5310.0}, {name: 'W27x161', weight: 161.0, Zx: 515.0, Ix: 6310.0},
+        {name: 'W33x141', weight: 141.0, Zx: 514.0, Ix: 7450.0}, {name: 'W24x176', weight: 176.0, Zx: 511.0, Ix: 5680.0},
+        {name: 'W36x135', weight: 135.0, Zx: 509.0, Ix: 7800.0}, {name: 'W30x148', weight: 148.0, Zx: 500.0, Ix: 6680.0},
+        {name: 'W18x211', weight: 211.0, Zx: 490.0, Ix: 4330.0}, {name: 'W14x257', weight: 257.0, Zx: 487.0, Ix: 3400.0},
+        {name: 'W12x279', weight: 279.0, Zx: 481.0, Ix: 3110.0}, {name: 'W21x182', weight: 182.0, Zx: 476.0, Ix: 4730.0},
+        {name: 'W24x162', weight: 162.0, Zx: 468.0, Ix: 5170.0}, {name: 'W33x130', weight: 130.0, Zx: 467.0, Ix: 6710.0},
+        {name: 'W27x146', weight: 146.0, Zx: 464.0, Ix: 5660.0}, {name: 'W18x192', weight: 192.0, Zx: 442.0, Ix: 3870.0},
+        {name: 'W30x132', weight: 132.0, Zx: 437.0, Ix: 5770.0}, {name: 'W14x233', weight: 233.0, Zx: 436.0, Ix: 3010.0},
+        {name: 'W21x166', weight: 166.0, Zx: 432.0, Ix: 4280.0}, {name: 'W12x252', weight: 252.0, Zx: 428.0, Ix: 2720.0},
+        {name: 'W24x146', weight: 146.0, Zx: 418.0, Ix: 4580.0}, {name: 'W33x118', weight: 118.0, Zx: 415.0, Ix: 5900.0},
+        {name: 'W30x124', weight: 124.0, Zx: 408.0, Ix: 5360.0}, {name: 'W18x175', weight: 175.0, Zx: 398.0, Ix: 3450.0},
+        {name: 'W27x129', weight: 129.0, Zx: 395.0, Ix: 4760.0}, {name: 'W14x211', weight: 211.0, Zx: 390.0, Ix: 2660.0},
+        {name: 'W12x230', weight: 230.0, Zx: 386.0, Ix: 2420.0}, {name: 'W30x116', weight: 116.0, Zx: 378.0, Ix: 4930.0},
+        {name: 'W21x147', weight: 147.0, Zx: 373.0, Ix: 3630.0}, {name: 'W24x131', weight: 131.0, Zx: 370.0, Ix: 4020.0},
+        {name: 'W18x158', weight: 158.0, Zx: 356.0, Ix: 3060.0}, {name: 'W14x193', weight: 193.0, Zx: 355.0, Ix: 2400.0},
+        {name: 'W12x210', weight: 210.0, Zx: 348.0, Ix: 2140.0}, {name: 'W30x108', weight: 108.0, Zx: 346.0, Ix: 4470.0},
+        {name: 'W27x114', weight: 114.0, Zx: 343.0, Ix: 4080.0}, {name: 'W21x132', weight: 132.0, Zx: 333.0, Ix: 3220.0},
+        {name: 'W24x117', weight: 117.0, Zx: 327.0, Ix: 3540.0}, {name: 'W18x143', weight: 143.0, Zx: 322.0, Ix: 2750.0},
+        {name: 'W14x176', weight: 176.0, Zx: 320.0, Ix: 2140.0}, {name: 'W30x99', weight: 99.0, Zx: 312.0, Ix: 3990.0},
+        {name: 'W12x190', weight: 190.0, Zx: 311.0, Ix: 1890.0}, {name: 'W21x122', weight: 122.0, Zx: 307.0, Ix: 2960.0},
+        {name: 'W27x102', weight: 102.0, Zx: 305.0, Ix: 3620.0}, {name: 'W18x130', weight: 130.0, Zx: 290.0, Ix: 2460.0},
+        {name: 'W24x104', weight: 104.0, Zx: 289.0, Ix: 3100.0}, {name: 'W14x159', weight: 159.0, Zx: 287.0, Ix: 1900.0},
+        {name: 'W30x90', weight: 90.0, Zx: 283.0, Ix: 3610.0}, {name: 'W24x103', weight: 103.0, Zx: 280.0, Ix: 3000.0},
+        {name: 'W21x111', weight: 111.0, Zx: 279.0, Ix: 2670.0}, {name: 'W27x94', weight: 94.0, Zx: 278.0, Ix: 3270.0},
+        {name: 'W12x170', weight: 170.0, Zx: 275.0, Ix: 1650.0}, {name: 'W18x119', weight: 119.0, Zx: 262.0, Ix: 2190.0},
+        {name: 'W14x145', weight: 145.0, Zx: 260.0, Ix: 1710.0}, {name: 'W24x94', weight: 94.0, Zx: 254.0, Ix: 2700.0},
+        {name: 'W21x101', weight: 101.0, Zx: 253.0, Ix: 2420.0}, {name: 'W27x84', weight: 84.0, Zx: 244.0, Ix: 2850.0},
+        {name: 'W12x152', weight: 152.0, Zx: 243.0, Ix: 1430.0}, {name: 'W14x132', weight: 132.0, Zx: 234.0, Ix: 1530.0},
+        {name: 'W18x106', weight: 106.0, Zx: 230.0, Ix: 1910.0}, {name: 'W24x84', weight: 84.0, Zx: 224.0, Ix: 2370.0},
+        {name: 'W21x93', weight: 93.0, Zx: 221.0, Ix: 2070.0}, {name: 'W12x136', weight: 136.0, Zx: 214.0, Ix: 1240.0},
+        {name: 'W14x120', weight: 120.0, Zx: 212.0, Ix: 1380.0}, {name: 'W18x97', weight: 97.0, Zx: 211.0, Ix: 1750.0},
+        {name: 'W24x76', weight: 76.0, Zx: 200.0, Ix: 2100.0}, {name: 'W16x100', weight: 100.0, Zx: 198.0, Ix: 1490.0},
+        {name: 'W21x83', weight: 83.0, Zx: 196.0, Ix: 1830.0}, {name: 'W14x109', weight: 109.0, Zx: 192.0, Ix: 1240.0},
+        {name: 'W18x86', weight: 86.0, Zx: 186.0, Ix: 1530.0}, {name: 'W12x120', weight: 120.0, Zx: 186.0, Ix: 1070.0},
+        {name: 'W24x68', weight: 68.0, Zx: 177.0, Ix: 1830.0}, {name: 'W16x89', weight: 89.0, Zx: 175.0, Ix: 1300.0},
+        {name: 'W14x99', weight: 99.0, Zx: 173.0, Ix: 1110.0}, {name: 'W21x73', weight: 73.0, Zx: 172.0, Ix: 1600.0},
+        {name: 'W12x106', weight: 106.0, Zx: 164.0, Ix: 933.0}, {name: 'W18x76', weight: 76.0, Zx: 163.0, Ix: 1330.0},
+        {name: 'W21x68', weight: 68.0, Zx: 160.0, Ix: 1480.0}, {name: 'W14x90', weight: 90.0, Zx: 157.0, Ix: 999.0},
+        {name: 'W24x62', weight: 62.0, Zx: 153.0, Ix: 1550.0}, {name: 'W16x77', weight: 77.0, Zx: 150.0, Ix: 1110.0},
+        {name: 'W12x96', weight: 96.0, Zx: 147.0, Ix: 833.0}, {name: 'W10x112', weight: 112.0, Zx: 147.0, Ix: 716.0},
+        {name: 'W18x71', weight: 71.0, Zx: 146.0, Ix: 1170.0}, {name: 'W21x62', weight: 62.0, Zx: 144.0, Ix: 1330.0},
+        {name: 'W14x82', weight: 82.0, Zx: 139.0, Ix: 881.0}, {name: 'W24x55', weight: 55.0, Zx: 134.0, Ix: 1350.0},
+        {name: 'W18x65', weight: 65.0, Zx: 133.0, Ix: 1070.0}, {name: 'W12x87', weight: 87.0, Zx: 132.0, Ix: 740.0},
+        {name: 'W16x67', weight: 67.0, Zx: 130.0, Ix: 954.0}, {name: 'W10x100', weight: 100.0, Zx: 130.0, Ix: 623.0},
+        {name: 'W21x57', weight: 57.0, Zx: 129.0, Ix: 1170.0}, {name: 'W21x55', weight: 55.0, Zx: 126.0, Ix: 1140.0},
+        {name: 'W14x74', weight: 74.0, Zx: 126.0, Ix: 795.0}, {name: 'W18x60', weight: 60.0, Zx: 123.0, Ix: 984.0},
+        {name: 'W12x79', weight: 79.0, Zx: 119.0, Ix: 662.0}, {name: 'W14x68', weight: 68.0, Zx: 115.0, Ix: 722.0},
+        {name: 'W10x88', weight: 88.0, Zx: 113.0, Ix: 534.0}, {name: 'W18x55', weight: 55.0, Zx: 112.0, Ix: 890.0},
+        {name: 'W21x50', weight: 50.0, Zx: 110.0, Ix: 984.0}, {name: 'W12x72', weight: 72.0, Zx: 108.0, Ix: 597.0},
+        {name: 'W21x48', weight: 48.0, Zx: 107.0, Ix: 959.0}, {name: 'W16x57', weight: 57.0, Zx: 105.0, Ix: 758.0},
+        {name: 'W14x61', weight: 61.0, Zx: 102.0, Ix: 640.0}, {name: 'W18x50', weight: 50.0, Zx: 101.0, Ix: 800.0},
+        {name: 'W10x77', weight: 77.0, Zx: 97.6, Ix: 455.0}, {name: 'W12x65', weight: 65.0, Zx: 96.8, Ix: 533.0},
+        {name: 'W21x44', weight: 44.0, Zx: 95.4, Ix: 843.0}, {name: 'W16x50', weight: 50.0, Zx: 92.0, Ix: 659.0},
+        {name: 'W18x46', weight: 46.0, Zx: 90.7, Ix: 712.0}, {name: 'W14x53', weight: 53.0, Zx: 87.1, Ix: 541.0},
+        {name: 'W12x58', weight: 58.0, Zx: 86.4, Ix: 475.0}, {name: 'W10x68', weight: 68.0, Zx: 85.3, Ix: 394.0},
+        {name: 'W16x45', weight: 45.0, Zx: 82.3, Ix: 586.0}, {name: 'W18x40', weight: 40.0, Zx: 78.4, Ix: 612.0},
+        {name: 'W14x48', weight: 48.0, Zx: 78.4, Ix: 484.0}, {name: 'W12x53', weight: 53.0, Zx: 77.9, Ix: 425.0},
+        {name: 'W10x60', weight: 60.0, Zx: 74.6, Ix: 341.0}, {name: 'W16x40', weight: 40.0, Zx: 73.0, Ix: 518.0},
+        {name: 'W12x50', weight: 50.0, Zx: 71.9, Ix: 391.0}, {name: 'W8x67', weight: 67.0, Zx: 70.1, Ix: 272.0},
+        {name: 'W14x43', weight: 43.0, Zx: 69.6, Ix: 428.0}, {name: 'W10x54', weight: 54.0, Zx: 66.6, Ix: 303.0},
+        {name: 'W18x35', weight: 35.0, Zx: 66.5, Ix: 510.0}, {name: 'W12x45', weight: 45.0, Zx: 64.2, Ix: 348.0},
+        {name: 'W16x36', weight: 36.0, Zx: 64.0, Ix: 448.0}, {name: 'W14x38', weight: 38.0, Zx: 61.5, Ix: 385.0},
+        {name: 'W10x49', weight: 49.0, Zx: 60.4, Ix: 272.0}, {name: 'W8x58', weight: 58.0, Zx: 59.8, Ix: 228.0},
+        {name: 'W12x40', weight: 40.0, Zx: 57.0, Ix: 307.0}, {name: 'W10x45', weight: 45.0, Zx: 54.9, Ix: 248.0},
+        {name: 'W14x34', weight: 34.0, Zx: 54.6, Ix: 340.0}, {name: 'W16x31', weight: 31.0, Zx: 54.0, Ix: 375.0},
+        {name: 'W12x35', weight: 35.0, Zx: 51.2, Ix: 285.0}, {name: 'W8x48', weight: 48.0, Zx: 49.0, Ix: 184.0},
+        {name: 'W14x30', weight: 30.0, Zx: 47.3, Ix: 291.0}, {name: 'W10x39', weight: 39.0, Zx: 46.8, Ix: 209.0},
+        {name: 'W16x26', weight: 26.0, Zx: 44.2, Ix: 301.0}, {name: 'W12x30', weight: 30.0, Zx: 43.1, Ix: 238.0},
+        {name: 'W14x26', weight: 26.0, Zx: 40.2, Ix: 245.0}, {name: 'W8x40', weight: 40.0, Zx: 39.8, Ix: 146.0},
+        {name: 'W10x33', weight: 33.0, Zx: 38.8, Ix: 171.0}, {name: 'W12x26', weight: 26.0, Zx: 37.2, Ix: 204.0},
+        {name: 'W10x30', weight: 30.0, Zx: 36.6, Ix: 170.0}, {name: 'W8x35', weight: 35.0, Zx: 34.7, Ix: 127.0},
+        {name: 'W14x22', weight: 22.0, Zx: 33.2, Ix: 199.0}, {name: 'W10x26', weight: 26.0, Zx: 31.3, Ix: 144.0},
+        {name: 'W8x31', weight: 31.0, Zx: 30.4, Ix: 110.0}, {name: 'W12x22', weight: 22.0, Zx: 29.3, Ix: 156.0},
+        {name: 'W8x28', weight: 28.0, Zx: 27.2, Ix: 98.0}, {name: 'W10x22', weight: 22.0, Zx: 26.0, Ix: 118.0},
+        {name: 'W12x19', weight: 19.0, Zx: 24.7, Ix: 130.0}, {name: 'W8x24', weight: 24.0, Zx: 23.1, Ix: 82.7},
+        {name: 'W10x19', weight: 19.0, Zx: 21.6, Ix: 96.3}, {name: 'W8x21', weight: 21.0, Zx: 20.4, Ix: 75.3},
+        {name: 'W12x16', weight: 16.0, Zx: 20.1, Ix: 103.0}, {name: 'W10x17', weight: 17.0, Zx: 18.7, Ix: 81.9},
+        {name: 'W12x14', weight: 14.0, Zx: 17.4, Ix: 88.6}, {name: 'W8x18', weight: 18.0, Zx: 17.0, Ix: 61.9},
+        {name: 'W10x15', weight: 15.0, Zx: 16.0, Ix: 68.9}, {name: 'W8x15', weight: 15.0, Zx: 13.6, Ix: 48.0},
+        {name: 'W10x12', weight: 12.0, Zx: 12.6, Ix: 53.8}, {name: 'W8x13', weight: 13.0, Zx: 11.4, Ix: 39.6},
+        {name: 'W8x10', weight: 10.0, Zx: 8.87, Ix: 30.8}
+    ];
+
+    let loads = [];
+    let supports = [];
+    let isPrinting = false;
+
+    window.onload = function() {
+        const baseSelect = document.getElementById("steelBaseType");
+        Object.keys(steelGroups).forEach(type => {
+            let opt = document.createElement("option"); opt.value = type; opt.text = `ASTM ${type}`; baseSelect.appendChild(opt);
+        });
+        let customOpt = document.createElement("option"); customOpt.value = "custom"; customOpt.text = "Custom Input..."; baseSelect.appendChild(customOpt);
+        
+        updateGrades(); updateLoadUI(); updateCanvas(); updateLists();
+    };
+
+    function updateGrades() {
+        const baseType = document.getElementById("steelBaseType").value;
+        const gradeGroup = document.getElementById("steelGradeGroup");
+        const gradeSelect = document.getElementById("steelSpecificGrade");
+        const fyInput = document.getElementById("fy");
+
+        if (baseType === "custom") {
+            gradeGroup.style.display = "none";
+            fyInput.readOnly = false; fyInput.value = ""; fyInput.placeholder = "Enter Fy..."; fyInput.focus();
+            return;
+        }
+
+        const grades = steelGroups[baseType];
+        gradeSelect.innerHTML = "";
+        if (grades.length === 1 && grades[0].grade === "-") {
+            gradeGroup.style.display = "none";
+            let opt = document.createElement("option"); opt.value = grades[0].fy; opt.text = "Standard"; gradeSelect.appendChild(opt);
+        } else {
+            gradeGroup.style.display = "flex";
+            grades.forEach(g => { let opt = document.createElement("option"); opt.value = g.fy; opt.text = g.grade; gradeSelect.appendChild(opt); });
+        }
+        updateFy();
+    }
+
+    function updateFy() {
+        if (document.getElementById("steelBaseType").value !== "custom") {
+            document.getElementById("fy").readOnly = true;
+            document.getElementById("fy").value = document.getElementById("steelSpecificGrade").value;
+        }
+    }
+
+    function toggleServiceability() {
+        const isServ = document.getElementById("checkServiceability").value === "yes";
+        document.getElementById("deflectionLimitGroup").style.display = isServ ? "flex" : "none";
+        document.getElementById("givenDeflectionGroup").style.display = isServ ? "flex" : "none";
+    }
+
+    function toggleGivenForces() {
+        const isGiven = document.getElementById("givenForces").value === "yes";
+        document.getElementById("givenForcesPanel").style.display = isGiven ? "block" : "none";
+        document.getElementById("solverPanel").style.display = isGiven ? "none" : "block";
+    }
+
+    function updateLoadUI() {
+        const type = document.getElementById('loadType').value;
+        const entry = document.getElementById('loadEntry').value;
+        const container = document.getElementById('dynamicLoadInputs');
+        let html = '';
+
+        if (type === 'point') {
+            html += '<div class="grid-3">';
+            if (entry === 'combined') {
+                html += '<input type="number" id="l_mag" placeholder="Combined Load (kips)">';
+            } else {
+                html += '<input type="number" id="l_magD" placeholder="Dead Load (kips)">';
+                html += '<input type="number" id="l_magL" placeholder="Live Load (kips)">';
+            }
+            html += '<input type="number" id="l_pos" placeholder="Distance from Left (ft)"></div>';
+        } else if (type === 'moment') {
+            html += '<div class="grid-3">';
+            if (entry === 'combined') {
+                html += '<input type="number" id="l_mag" placeholder="Combined Moment (kip-ft)">';
+            } else {
+                html += '<input type="number" id="l_magD" placeholder="Dead Moment (kip-ft)">';
+                html += '<input type="number" id="l_magL" placeholder="Live Moment (kip-ft)">';
+            }
+            html += '<input type="number" id="l_pos" placeholder="Distance from Left (ft)"></div>';
+        } else if (type === 'uniform') {
+            html += '<div class="grid-4">';
+            if (entry === 'combined') {
+                html += '<input type="number" id="l_mag" placeholder="Combined Load (kips/ft)">';
+            } else {
+                html += '<input type="number" id="l_magD" placeholder="Dead Load (kips/ft)">';
+                html += '<input type="number" id="l_magL" placeholder="Live Load (kips/ft)">';
+            }
+            html += '<input type="number" id="l_start" placeholder="Start Pos (ft)">';
+            html += '<input type="number" id="l_end" placeholder="End Pos (ft) - Leave blank for full"></div>';
+        } else if (type === 'triangular') {
+            if (entry === 'combined') {
+                html += '<div class="grid-4"><input type="number" id="l_mag_s" placeholder="Start Mag (kips/ft)">';
+                html += '<input type="number" id="l_mag_e" placeholder="End Mag (kips/ft)">';
+                html += '<input type="number" id="l_start" placeholder="Start Pos (ft)">';
+                html += '<input type="number" id="l_end" placeholder="End Pos (ft) - Leave blank for full"></div>';
+            } else {
+                html += '<div class="grid-4"><input type="number" id="l_magD_s" placeholder="Start Dead (kips/ft)">';
+                html += '<input type="number" id="l_magL_s" placeholder="Start Live (kips/ft)">';
+                html += '<input type="number" id="l_magD_e" placeholder="End Dead (kips/ft)">';
+                html += '<input type="number" id="l_magL_e" placeholder="End Live (kips/ft)"></div>';
+                html += '<div class="grid-2"><input type="number" id="l_start" placeholder="Start Pos (ft)">';
+                html += '<input type="number" id="l_end" placeholder="End Pos (ft) - Leave blank for full"></div>';
+            }
+        }
+        container.innerHTML = html;
+    }
+
+    function updateLists() {
+        const sList = document.getElementById("supportList");
+        sList.innerHTML = "";
+        supports.forEach((s, i) => {
+            let label = s.type === 'cantilever' ? 'Fixed End' : s.type.charAt(0).toUpperCase() + s.type.slice(1);
+            sList.innerHTML += `<div class="item-chip">${label} @ ${s.pos}ft <button onclick="removeSupport(${i})">X</button></div>`;
+        });
+
+        const lList = document.getElementById("loadList");
+        lList.innerHTML = "";
+        loads.forEach((l, i) => {
+            let val = l.entry === 'combined' ? l.magD : `${l.magD}D + ${l.magL}L`;
+            let desc = l.type === 'point' ? `Point: ${val} k @ ${l.pos}ft` :
+                       l.type === 'moment' ? `Moment: ${val} kip-ft @ ${l.pos}ft` :
+                       l.type === 'uniform' ? `Uniform: ${val} k/ft from ${l.start} to ${l.end}ft` :
+                       `Triangular: ${l.entry === 'combined' ? l.magD_start + ' to ' + l.magD_end : 'DL/LL'} k/ft from ${l.start} to ${l.end}ft`;
+            lList.innerHTML += `<div class="item-chip">${desc} <button onclick="removeLoad(${i})">X</button></div>`;
+        });
+    }
+
+    function removeSupport(index) {
+        supports.splice(index, 1);
+        updateCanvas();
+        updateLists();
+    }
+
+    function removeLoad(index) {
+        loads.splice(index, 1);
+        updateCanvas();
+        updateLists();
+    }
+
+    // Load-by-Load Maximum Evaluator
+    function getFactoredLoads() {
+        const method = document.getElementById("method").value;
+        return loads.map(l => {
+            let fl = { ...l };
+            if (l.entry === 'combined') {
+                if (fl.type === 'point' || fl.type === 'uniform' || fl.type === 'moment') fl.mag = fl.magD;
+                else { fl.magStart = fl.magD_start; fl.magEnd = fl.magD_end; }
+            } else {
+                if (method === 'LRFD') {
+                    if (fl.type === 'point' || fl.type === 'uniform' || fl.type === 'moment') {
+                        let c1 = 1.4 * fl.magD;
+                        let c2 = 1.2 * fl.magD + 1.6 * fl.magL;
+                        fl.mag = Math.abs(c1) > Math.abs(c2) ? c1 : c2;
+                    } else {
+                        let s1 = 1.4 * fl.magD_start;
+                        let s2 = 1.2 * fl.magD_start + 1.6 * fl.magL_start;
+                        fl.magStart = Math.abs(s1) > Math.abs(s2) ? s1 : s2;
+
+                        let e1 = 1.4 * fl.magD_end;
+                        let e2 = 1.2 * fl.magD_end + 1.6 * fl.magL_end;
+                        fl.magEnd = Math.abs(e1) > Math.abs(e2) ? e1 : e2;
+                    }
+                } else {
+                    if (fl.type === 'point' || fl.type === 'uniform' || fl.type === 'moment') fl.mag = fl.magD + fl.magL;
+                    else { fl.magStart = fl.magD_start + fl.magL_start; fl.magEnd = fl.magD_end + fl.magL_end; }
+                }
+            }
+            
+            if (fl.type === 'point' || fl.type === 'uniform' || fl.type === 'moment') fl.dispMag = parseFloat(fl.mag.toFixed(2));
+            else {
+                fl.dispMagStart = parseFloat(fl.magStart.toFixed(2));
+                fl.dispMagEnd = parseFloat(fl.magEnd.toFixed(2));
+            }
+            return fl;
+        });
+    }
+
+    function addSupport() {
+        const pos = parseFloat(document.getElementById("supportPos").value);
+        const type = document.getElementById("supportType").value;
+        const beamL = parseFloat(document.getElementById("beamLength").value) || 20;
+        
+        if (!isNaN(pos)) { 
+            supports.push({pos, type, M: 0, theta: 0}); 
+            updateCanvas(); 
+            updateLists(); 
+        }
+    }
+
+    function addLoad() {
+        const type = document.getElementById('loadType').value;
+        const entry = document.getElementById('loadEntry').value;
+        const beamL = parseFloat(document.getElementById("beamLength").value) || 20;
+        let l = { type, entry };
+
+        if (type === 'point' || type === 'moment') {
+            l.pos = parseFloat(document.getElementById("l_pos").value) || 0;
+            l.magD = parseFloat(document.getElementById(entry === 'combined' ? "l_mag" : "l_magD").value) || 0;
+            l.magL = entry === 'combined' ? 0 : parseFloat(document.getElementById("l_magL").value) || 0;
+        } else if (type === 'uniform') {
+            l.start = parseFloat(document.getElementById("l_start").value) || 0;
+            let rawEnd = parseFloat(document.getElementById("l_end").value);
+            l.end = isNaN(rawEnd) ? beamL : rawEnd;
+            if (l.end <= l.start) l.end = beamL;
+            l.magD = parseFloat(document.getElementById(entry === 'combined' ? "l_mag" : "l_magD").value) || 0;
+            l.magL = entry === 'combined' ? 0 : parseFloat(document.getElementById("l_magL").value) || 0;
+        } else if (type === 'triangular') {
+            l.start = parseFloat(document.getElementById("l_start").value) || 0;
+            let rawEnd = parseFloat(document.getElementById("l_end").value);
+            l.end = isNaN(rawEnd) ? beamL : rawEnd;
+            if (l.end <= l.start) l.end = beamL;
+
+            if (entry === 'combined') {
+                l.magD_start = parseFloat(document.getElementById("l_mag_s").value) || 0;
+                l.magD_end = parseFloat(document.getElementById("l_mag_e").value) || 0;
+                l.magL_start = 0; l.magL_end = 0;
+            } else {
+                l.magD_start = parseFloat(document.getElementById("l_magD_s").value) || 0;
+                l.magL_start = parseFloat(document.getElementById("l_magL_s").value) || 0;
+                l.magD_end = parseFloat(document.getElementById("l_magD_e").value) || 0;
+                l.magL_end = parseFloat(document.getElementById("l_magL_e").value) || 0;
+            }
+        }
+        loads.push(l); updateCanvas(); updateLists();
+    }
+
+    function clearBeam() { loads = []; supports = []; updateCanvas(); updateLists(); }
+
+    function updateCanvas() {
+        const canvas = document.getElementById("beamCanvas"); const ctx = canvas.getContext("2d");
+        
+        if (isPrinting) {
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        const L = parseFloat(document.getElementById("beamLength").value) || 20;
+        const scale = (canvas.width - 100) / L;
+        const startX = 50; const startY = 150;
+
+        const mainColor = isPrinting ? "black" : "white";
+        const supportColor = "#f97316";
+
+        ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(startX + (L * scale), startY);
+        ctx.lineWidth = 6; ctx.strokeStyle = mainColor; ctx.stroke();
+
+        ctx.fillStyle = supportColor;
+        supports.forEach(sup => {
+            const px = startX + (sup.pos * scale);
+            if(sup.type === 'pin') {
+                ctx.beginPath(); ctx.moveTo(px, startY + 3); ctx.lineTo(px - 10, startY + 20); ctx.lineTo(px + 10, startY + 20); ctx.fill();
+            } else if(sup.type === 'roller') {
+                ctx.beginPath(); ctx.arc(px, startY + 12, 8, 0, Math.PI*2); ctx.fill();
+            } else if(sup.type === 'cantilever') {
+                ctx.fillRect(px - 10, startY - 30, 20, 60); ctx.strokeStyle = supportColor; ctx.lineWidth = 2;
+                for(let i=0; i<60; i+=10) {
+                    ctx.beginPath();
+                    if (sup.pos < L/2) { ctx.moveTo(px - 10, startY - 30 + i); ctx.lineTo(px - 20, startY - 20 + i); }
+                    else { ctx.moveTo(px + 10, startY - 30 + i); ctx.lineTo(px + 20, startY - 20 + i); }
+                    ctx.stroke();
+                }
+            }
+        });
+
+        ctx.strokeStyle = mainColor; 
+        ctx.fillStyle = mainColor;
+        ctx.font = "bold 13px 'Segoe UI', Tahoma, sans-serif";
+        ctx.textAlign = "center";
+
+        let dynamicFactoredLoads = getFactoredLoads();
+
+        dynamicFactoredLoads.forEach(load => {
+            if(load.type === 'point') {
+                const px = startX + (load.pos * scale);
+                ctx.beginPath(); ctx.moveTo(px, startY - 50); ctx.lineTo(px, startY - 5); ctx.lineWidth = 3; ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(px, startY - 5); ctx.lineTo(px - 5, startY - 15); ctx.lineTo(px + 5, startY - 15); ctx.fill();
+                ctx.fillText(load.dispMag + " k", px, startY - 55);
+            } 
+            else if(load.type === 'moment') {
+                const px = startX + (load.pos * scale);
+                ctx.beginPath();
+                ctx.arc(px, startY, 25, Math.PI, 2 * Math.PI);
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                if (load.dispMag >= 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(px + 25, startY);
+                    ctx.lineTo(px + 18, startY - 10);
+                    ctx.lineTo(px + 32, startY - 10);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(px - 25, startY);
+                    ctx.lineTo(px - 32, startY - 10);
+                    ctx.lineTo(px - 18, startY - 10);
+                    ctx.fill();
+                }
+                ctx.fillText(Math.abs(load.dispMag) + " kip-ft", px, startY - 35);
+            }
+            else if(load.type === 'uniform') {
+                let yLine = startY - 30;
+                
+                ctx.beginPath(); ctx.lineWidth = 2;
+                ctx.moveTo(startX + load.start * scale, yLine);
+                ctx.lineTo(startX + load.end * scale, yLine);
+                ctx.stroke();
+                
+                let loadLenPx = (load.end - load.start) * scale;
+                let numArrows = Math.max(2, Math.floor(loadLenPx / 20));
+                for(let i=0; i<=numArrows; i++) {
+                    let px = startX + load.start * scale + (i * loadLenPx / numArrows);
+                    ctx.beginPath(); ctx.moveTo(px, yLine); ctx.lineTo(px, startY); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(px, startY); ctx.lineTo(px - 4, startY - 6); ctx.lineTo(px + 4, startY - 6); ctx.fill();
+                }
+
+                let midPointX = startX + ((load.start + load.end) / 2) * scale;
+                ctx.fillText(load.dispMag + " kips/ft", midPointX, yLine - 8);
+                
+                ctx.globalAlpha = 0.1;
+                ctx.fillRect(startX + load.start * scale, yLine, loadLenPx, 30);
+                ctx.globalAlpha = 1.0;
+            } 
+            else if(load.type === 'triangular') {
+                let maxMag = Math.max(load.dispMagStart, load.dispMagEnd);
+                if (maxMag === 0) maxMag = 1;
+                let h1 = (load.dispMagStart / maxMag) * 45;
+                let h2 = (load.dispMagEnd / maxMag) * 45;
+
+                ctx.beginPath(); ctx.lineWidth = 2;
+                ctx.moveTo(startX + load.start * scale, startY - h1);
+                ctx.lineTo(startX + load.end * scale, startY - h2);
+                ctx.stroke();
+
+                let loadLenPx = (load.end - load.start) * scale;
+                let numArrows = Math.max(2, Math.floor(loadLenPx / 20));
+                for(let i=0; i<=numArrows; i++) {
+                    let ratio = i / numArrows;
+                    let px = startX + load.start * scale + (ratio * loadLenPx);
+                    let pyTop = (startY - h1) - ratio * (h2 - h1);
+                    
+                    ctx.beginPath(); ctx.moveTo(px, pyTop); ctx.lineTo(px, startY); ctx.stroke();
+                    if (startY - pyTop > 5) {
+                        ctx.beginPath(); ctx.moveTo(px, startY); ctx.lineTo(px - 4, startY - 6); ctx.lineTo(px + 4, startY - 6); ctx.fill();
+                    }
+                }
+
+                if (load.dispMagStart > 0) ctx.fillText(load.dispMagStart + " kips/ft", startX + load.start * scale, startY - h1 - 8);
+                if (load.dispMagEnd > 0) ctx.fillText(load.dispMagEnd + " kips/ft", startX + load.end * scale, startY - h2 - 8);
+                
+                ctx.globalAlpha = 0.1;
+                ctx.beginPath();
+                ctx.moveTo(startX + load.start * scale, startY);
+                ctx.lineTo(startX + load.start * scale, startY - h1);
+                ctx.lineTo(startX + load.end * scale, startY - h2);
+                ctx.lineTo(startX + load.end * scale, startY);
+                ctx.fill(); 
+                ctx.globalAlpha = 1.0;
+            }
+        });
+    }
+
+    function solveLinearSystem(A, B) {
+        let n = B.length;
+        for (let i = 0; i < n; i++) {
+            let maxEl = Math.abs(A[i][i]), maxRow = i;
+            for (let k = i + 1; k < n; k++) if (Math.abs(A[k][i]) > maxEl) { maxEl = Math.abs(A[k][i]); maxRow = k; }
+            for (let k = i; k < n; k++) { let tmp = A[maxRow][k]; A[maxRow][k] = A[i][k]; A[i][k] = tmp; }
+            let tmpB = B[maxRow]; B[maxRow] = B[i]; B[i] = tmpB;
+            for (let k = i + 1; k < n; k++) {
+                let c = -A[k][i] / A[i][i];
+                for (let j = i; j < n; j++) { if (i === j) A[k][j] = 0; else A[k][j] += c * A[i][j]; }
+                B[k] += c * B[i];
+            }
+        }
+        let X = new Array(n).fill(0);
+        for (let i = n - 1; i >= 0; i--) {
+            X[i] = B[i] / A[i][i];
+            for (let k = i - 1; k >= 0; k--) B[k] -= A[k][i] * X[i];
+        }
+        return X;
+    }
+
+    function getLoadIntensityAt(x, fLoads) {
+        let w = 0;
+        fLoads.forEach(l => {
+            if (l.type === 'uniform' && x >= l.start && x <= l.end) w += l.mag;
+            else if (l.type === 'triangular' && x >= l.start && x <= l.end) {
+                let ratio = (x - l.start) / (l.end - l.start);
+                w += l.magStart + ratio * (l.magEnd - l.magStart);
+            }
+        });
+        return w;
+    }
+
+    function getStaticsLeftOf(x, fLoads) {
+        let M = 0, steps = 100, dx = x / steps;
+        if(x <= 0) return 0;
+        for (let i=0; i<steps; i++) {
+            let px = (i + 0.5)*dx; let w = getLoadIntensityAt(px, fLoads); M -= (w * dx) * (x - px);
+        }
+        fLoads.forEach(l => { 
+            if (l.type === 'point' && l.pos < x) M -= l.mag * (x - l.pos); 
+            if (l.type === 'moment' && l.pos < x) M += l.mag; 
+        });
+        return M;
+    }
+
+    function getStaticsRightOf(x, BeamLength, fLoads) {
+        let M = 0, steps = 100, dx = (BeamLength - x) / steps;
+        if(x >= BeamLength) return 0;
+        for (let i=0; i<steps; i++) {
+            let px = x + (i + 0.5)*dx; let w = getLoadIntensityAt(px, fLoads); M -= (w * dx) * (px - x);
+        }
+        fLoads.forEach(l => { 
+            if (l.type === 'point' && l.pos > x) M -= l.mag * (l.pos - x); 
+            if (l.type === 'moment' && l.pos > x) M -= l.mag; 
+        });
+        return M;
+    }
+
+    function getSimpleMoment(xA, xB, x_eval, fLoads) {
+        let VA = 0, steps = 200, L = xB - xA, dx = L / steps;
+        for(let i=0; i<steps; i++) {
+            let px = xA + (i + 0.5)*dx; let w = getLoadIntensityAt(px, fLoads); VA += (w * dx) * (xB - px) / L;
+        }
+        fLoads.forEach(l => { 
+            if(l.type === 'point' && l.pos > xA && l.pos < xB) VA += l.mag * (xB - l.pos) / L; 
+            if(l.type === 'moment' && l.pos > xA && l.pos < xB) VA -= l.mag / L;
+        });
+
+        let M0 = VA * (x_eval - xA);
+        dx = (x_eval - xA) / steps;
+        if (dx > 0) {
+            for(let i=0; i<steps; i++) {
+                let px = xA + (i + 0.5)*dx; let w = getLoadIntensityAt(px, fLoads); M0 -= (w * dx) * (x_eval - px);
+            }
+        }
+        fLoads.forEach(l => { 
+            if(l.type === 'point' && l.pos > xA && l.pos < x_eval) M0 -= l.mag * (x_eval - l.pos); 
+            if(l.type === 'moment' && l.pos > xA && l.pos < x_eval) M0 += l.mag;
+        });
+        return M0;
+    }
+
+    function getC(xA, xB, fLoads) {
+        let CL = 0, CR = 0, steps = 200, L = xB - xA, dx = L / steps;
+        for (let i=0; i<steps; i++) {
+            let px = xA + (i + 0.5)*dx;
+            let m = getSimpleMoment(xA, xB, px, fLoads);
+            CL += m * (xB - px) / L * dx; CR += m * (px - xA) / L * dx;
+        }
+        return { CL, CR }; 
+    }
+
+    function runEngine(fLoads, beamLength, method) {
+        let sups = [...supports].sort((a,b) => a.pos - b.pos);
+        
+        fLoads = fLoads.map(l => {
+            if (l.type === 'moment') {
+                let isAtSupport = sups.some(s => Math.abs(s.pos - l.pos) < 1e-6);
+                if (isAtSupport) {
+                    let newPos = l.pos >= beamLength ? l.pos - 1e-4 : l.pos + 1e-4;
+                    return { ...l, pos: newPos };
+                }
+            }
+            return l;
+        });
+
+        let n = sups.length;
+        if (n === 0) return 0; 
+
+        if (n === 1) {
+            if (sups[0].type !== 'cantilever') return 0; 
+            sups[0].M = getStaticsLeftOf(sups[0].pos, fLoads) + getStaticsRightOf(sups[0].pos, beamLength, fLoads);
+        } else {
+            let A = Array(n).fill(0).map(() => Array(n).fill(0));
+            let B = Array(n).fill(0);
+
+            for (let i = 0; i < n; i++) {
+                if (i === 0) {
+                    if (sups[i].type === 'cantilever') {
+                        let L1 = sups[1].pos - sups[0].pos; let C = getC(sups[0].pos, sups[1].pos, fLoads);
+                        A[0][0] = 2 * L1; A[0][1] = L1; B[0] = -6 * (C.CL); 
+                    } else { 
+                        A[0][0] = 1; B[0] = getStaticsLeftOf(sups[0].pos, fLoads); 
+                    }
+                } else if (i === n - 1) { 
+                    if (sups[i].type === 'cantilever') {
+                        let L_prev = sups[i].pos - sups[i-1].pos; let C = getC(sups[i-1].pos, sups[i].pos, fLoads);
+                        A[i][i-1] = L_prev; A[i][i] = 2 * L_prev; B[i] = -6 * (C.CR); 
+                    } else { 
+                        A[i][i] = 1; B[i] = getStaticsRightOf(sups[i].pos, beamLength, fLoads); 
+                    }
+                } else { 
+                    let L_prev = sups[i].pos - sups[i-1].pos; let L_next = sups[i+1].pos - sups[i].pos;
+                    let C_prev = getC(sups[i-1].pos, sups[i].pos, fLoads); let C_next = getC(sups[i].pos, sups[i+1].pos, fLoads);
+                    
+                    A[i][i-1] = L_prev; 
+                    A[i][i] = 2 * (L_prev + L_next); 
+                    A[i][i+1] = L_next;
+                    B[i] = -6 * (C_prev.CR + C_next.CL);
+                }
+            }
+            let M_solved = solveLinearSystem(A, B);
+            for(let i=0; i<n; i++) sups[i].M = M_solved[i];
+        }
+
+        let evalPoints = new Set();
+        let slices = 500;
+        let dx = beamLength / slices;
+        for (let i = 0; i <= slices; i++) evalPoints.add(parseFloat((i * dx).toFixed(6)));
+        
+        supports.forEach(s => { 
+            evalPoints.add(parseFloat(s.pos.toFixed(6))); 
+            if (s.pos > 0) evalPoints.add(parseFloat((s.pos - 1e-5).toFixed(6))); 
+            if (s.pos < beamLength) evalPoints.add(parseFloat((s.pos + 1e-5).toFixed(6))); 
+        });
+        fLoads.forEach(l => {
+            if(l.type === 'point') evalPoints.add(parseFloat(l.pos.toFixed(6)));
+            else if(l.type === 'moment') {
+                evalPoints.add(parseFloat(l.pos.toFixed(6)));
+                if (l.pos > 0) evalPoints.add(parseFloat((l.pos - 1e-5).toFixed(6)));
+                if (l.pos < beamLength) evalPoints.add(parseFloat((l.pos + 1e-5).toFixed(6)));
+            }
+            else { 
+                evalPoints.add(parseFloat(l.start.toFixed(6))); 
+                evalPoints.add(parseFloat(l.end.toFixed(6))); 
+            }
+        });
+        
+        let pts = Array.from(evalPoints).filter(x => x >= 0 && x <= beamLength).sort((a,b) => a-b);
+        let maxMoment = 0;
+
+        for (let x of pts) {
+            let mx = 0;
+            if (x < sups[0].pos) {
+                mx = getStaticsLeftOf(x, fLoads);
+            } else if (x > sups[n-1].pos) {
+                mx = getStaticsRightOf(x, beamLength, fLoads);
+            } else {
+                if (n === 1) {
+                    mx = sups[0].M; 
+                } else {
+                    for (let j = 1; j < n; j++) {
+                        if (x <= sups[j].pos) { 
+                            let L_span = sups[j].pos - sups[j-1].pos;
+                            if (L_span > 0) {
+                                let M0 = getSimpleMoment(sups[j-1].pos, sups[j].pos, x, fLoads);
+                                mx = M0 + sups[j-1].M + (x - sups[j-1].pos) / L_span * (sups[j].M - sups[j-1].M);
+                            } else {
+                                mx = sups[j].M; 
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            if (Math.abs(mx) > Math.abs(maxMoment)) maxMoment = mx;
+        }
+        return Math.abs(maxMoment);
+    }
+
+    function getMaxDeflectionEI(fLoads, beamLength) {
+        let sups = [...supports].sort((a,b) => a.pos - b.pos);
+        
+        fLoads = fLoads.map(l => {
+            if (l.type === 'moment') {
+                let isAtSupport = sups.some(s => Math.abs(s.pos - l.pos) < 1e-6);
+                if (isAtSupport) {
+                    let newPos = l.pos >= beamLength ? l.pos - 1e-4 : l.pos + 1e-4;
+                    return { ...l, pos: newPos };
+                }
+            }
+            return l;
+        });
+
+        let n = sups.length;
+        if (n === 0) return 0;
+        
+        function getM_x(x) {
+            if (x <= sups[0].pos) return getStaticsLeftOf(x, fLoads);
+            if (x >= sups[n-1].pos) return getStaticsRightOf(x, beamLength, fLoads);
+            for (let j = 1; j < n; j++) {
+                if (x <= sups[j].pos) {
+                    let L_span = sups[j].pos - sups[j-1].pos;
+                    if (L_span > 0) {
+                        let M0 = getSimpleMoment(sups[j-1].pos, sups[j].pos, x, fLoads);
+                        return M0 + sups[j-1].M + (x - sups[j-1].pos) / L_span * (sups[j].M - sups[j-1].M);
+                    }
+                    return sups[j].M;
+                }
+            }
+            return 0;
+        }
+
+        function integrateMoment(xA, x_eval) {
+            let steps = 100;
+            let dx = (x_eval - xA) / steps;
+            let res = 0;
+            if (dx === 0) return 0;
+            for (let i = 0; i < steps; i++) {
+                let u = xA + (i + 0.5) * dx;
+                res += getM_x(u) * (x_eval - u) * dx;
+            }
+            return res;
+        }
+
+        for (let j = 0; j < n; j++) {
+            if (sups[j].type === 'cantilever') {
+                sups[j].theta = 0;
+            } else if (j < n - 1 && sups[j+1].pos > sups[j].pos) {
+                sups[j].theta = -integrateMoment(sups[j].pos, sups[j+1].pos) / (sups[j+1].pos - sups[j].pos);
+            } else if (j > 0 && sups[j].pos > sups[j-1].pos) {
+                let theta_A = sups[j-1].theta;
+                let area = 0, steps = 100, dx = (sups[j].pos - sups[j-1].pos)/steps;
+                for(let i=0; i<steps; i++) area += getM_x(sups[j-1].pos + (i+0.5)*dx) * dx;
+                sups[j].theta = theta_A + area;
+            } else {
+                sups[j].theta = 0;
+            }
+        }
+
+        let maxEIy = 0;
+        let slices = 500;
+        let dx = beamLength / slices;
+        for (let i = 0; i <= slices; i++) {
+            let x = i * dx;
+            let y = 0;
+            if (x < sups[0].pos) {
+                y = sups[0].theta * (x - sups[0].pos) + integrateMoment(sups[0].pos, x);
+            } else if (x > sups[n-1].pos) {
+                y = sups[n-1].theta * (x - sups[n-1].pos) + integrateMoment(sups[n-1].pos, x);
+            } else {
+                for (let j = 1; j < n; j++) {
+                    if (x <= sups[j].pos) {
+                        y = sups[j-1].theta * (x - sups[j-1].pos) + integrateMoment(sups[j-1].pos, x);
+                        break;
+                    }
+                }
+            }
+            if (Math.abs(y) > Math.abs(maxEIy)) maxEIy = Math.abs(y);
+        }
+        return maxEIy; 
+    }
+
+    function printReport() {
+        const btn = document.getElementById("printBtn");
+        const originalText = btn.innerText;
+        btn.innerText = "Generating PDF...";
+        btn.disabled = true;
+
+        // Force canvas to white background
+        isPrinting = true;
+        updateCanvas();
+        const canvas = document.getElementById("beamCanvas");
+        const imgData = canvas.toDataURL("image/png");
+        
+        // Revert to dark mode immediately
+        isPrinting = false;
+        updateCanvas();
+
+        const L = document.getElementById("beamLength").value;
+        const method = document.getElementById("method").value;
+        const fy = document.getElementById("fy").value;
+        const limit = document.getElementById("deflectionLimit").value;
+        const checkServ = document.getElementById("checkServiceability").value === "yes";
+        const selfWt = document.getElementById("considerSelfWeight").value === "yes";
+
+        // UI Swap Trick: Hide the main container
+        const mainContainer = document.getElementById("mainContainer");
+        mainContainer.style.display = "none";
+
+        // Create the physical report div - styled for perfect A4/Letter size rendering
+        const reportDiv = document.createElement("div");
+        reportDiv.id = "pdfTempContainer";
+        reportDiv.style.width = "7.5in"; // Explicit dimension for the snapshot
+        reportDiv.style.margin = "0 auto";
+        reportDiv.style.padding = "0.2in";
+        reportDiv.style.background = "white";
+        reportDiv.style.color = "black";
+        reportDiv.style.fontFamily = "'Segoe UI', Tahoma, sans-serif";
+        
+        // Wrap each line in a clean block so html2pdf can naturally drop the self-weight to page 2 if it's too long!
+        let rawLog = document.getElementById("outputLog").innerHTML;
+        let formattedLog = `<div style="page-break-inside: avoid;">` + 
+                           rawLog.replace(/<br\s*\/?>/gi, '</div><div style="page-break-inside: avoid; margin-bottom: 4px;">') + 
+                           `</div>`;
+
+        reportDiv.innerHTML = `
+            <h2 style="color:#f97316; border-bottom:2px solid #333; padding-bottom:5px; margin-top:0;">Project Report: Steel Beam Design</h2>
+            <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:14px; text-align: left;">
+                <tr><td style="padding:5px;"><strong>Design Method:</strong></td><td>${method}</td>
+                    <td style="padding:5px;"><strong>Beam Length:</strong></td><td>${L} ft</td></tr>
+                <tr><td style="padding:5px;"><strong>Yield Strength (Fy):</strong></td><td>${fy} ksi</td>
+                    <td style="padding:5px;"><strong>Serviceability Limit:</strong></td><td>${checkServ ? 'L / ' + limit : 'Ignored'}</td></tr>
+                <tr><td style="padding:5px;"><strong>Self-Weight Checked:</strong></td><td>${selfWt ? 'Yes' : 'No'}</td>
+                    <td style="padding:5px;"><strong>Number of Loads:</strong></td><td>${loads.length}</td></tr>
+            </table>
+            
+            <h3 style="margin-top:30px; border-bottom:1px solid #ccc; padding-bottom:5px;">Beam Illustration</h3>
+            <img src="${imgData}" style="width:100%; max-width: 100%; box-sizing: border-box; display: block; margin: 15px auto; border: 1px solid black;">
+            
+            <h3 style="margin-top:30px; border-bottom:1px solid #ccc; padding-bottom:5px;">Design Results</h3>
+            <div style="line-height: 1.8; font-size: 14px; margin-top: 10px;">
+                ${formattedLog}
+            </div>
+        `;
+
+        document.body.appendChild(reportDiv);
+
+        // Export config
+        const opt = {
+            margin:       [0.5, 0.5, 0.5, 0.5], // top, left, bottom, right in inches
+            filename:     'Steel_Beam_Design_Report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true }, 
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' },
+            pagebreak:    { mode: ['css', 'legacy'] }
+        };
+
+        // Take snapshot and swap UI back
+        html2pdf().set(opt).from(reportDiv).save().then(() => {
+            document.body.removeChild(reportDiv);
+            mainContainer.style.display = ""; 
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }).catch(err => {
+            console.error(err);
+            alert("Something went wrong saving the PDF.");
+            if(document.body.contains(reportDiv)) document.body.removeChild(reportDiv);
+            mainContainer.style.display = "";
+            btn.innerText = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    function solveAgain() {
+        window.scrollTo(0, 0);
+        location.reload();
+    }
+
+    function calculateDesign() {
+        const method = document.getElementById("method").value;
+        const fy = parseFloat(document.getElementById("fy").value);
+        if (isNaN(fy) || fy <= 0) return alert("Valid Yield Strength (Fy) required.");
+
+        const isGiven = document.getElementById("givenForces").value === "yes";
+        const considerServ = document.getElementById("checkServiceability").value === "yes";
+        const L = parseFloat(document.getElementById("beamLength").value);
+        const E = 29000;
+        
+        let Mu = 0, RequiredZx = 0, RequiredIx = 0;
+        let logHTML = "";
+
+        let baseFactoredLoads = getFactoredLoads(); // Uses the new load-by-load evaluator
+
+        if (isGiven) {
+            Mu = parseFloat(document.getElementById("givenMoment").value);
+            logHTML += `• User Provided Max Moment = ${Mu.toFixed(2)} kip-ft<br>`;
+        } else {
+            if (supports.length < 2 && !(supports.length === 1 && supports[0].type === 'cantilever')) {
+                return alert("Invalid supports. Add at least 2 simple supports or 1 cantilever.");
+            }
+            Mu = runEngine(baseFactoredLoads, L, method);
+            logHTML += `• Matrix Solver Max Moment (${method}) = ${Mu.toFixed(2)} kip-ft<br>`;
+        }
+
+        if (method === "LRFD") RequiredZx = (Mu * 12) / (0.9 * fy);
+        else RequiredZx = (Mu * 12 * 1.67) / fy;
+        logHTML += `• Required Zx = <strong>${RequiredZx.toFixed(2)} in³</strong><br>`;
+
+        if (considerServ) {
+            let allowDeflection = 0;
+            if (isGiven) {
+                allowDeflection = parseFloat(document.getElementById("givenDeflection").value) * 12;
+                let equivW_L = (8 * Mu) / Math.pow(L, 2); 
+                RequiredIx = (5 * equivW_L * Math.pow(L*12, 4)) / (384 * E * allowDeflection);
+                
+                logHTML += `• Allowable Deflection = ${allowDeflection.toFixed(3)} in<br>`;
+                logHTML += `• Required Ix (Uniform Load Assumption) = <strong>${RequiredIx.toFixed(2)} in⁴</strong><br>`;
+            } else {
+                const defLimitRaw = parseFloat(document.getElementById("deflectionLimit").value);
+                allowDeflection = (L * 12) / defLimitRaw;
+
+                // For deflection we just use pure unfactored Live Load
+                let liveLoadsOnly = loads.map(l => {
+                    let fl = { ...l };
+                    if (l.entry === 'combined') {
+                        if (fl.type === 'point' || fl.type === 'uniform' || fl.type === 'moment') fl.mag = fl.magD;
+                        else { fl.magStart = fl.magD_start; fl.magEnd = fl.magD_end; }
+                    } else {
+                        if (fl.type === 'point' || fl.type === 'uniform' || fl.type === 'moment') fl.mag = fl.magL || 0;
+                        else { fl.magStart = fl.magL_start || 0; fl.magEnd = fl.magL_end || 0; }
+                    }
+                    return fl;
+                });
+                
+                runEngine(liveLoadsOnly, L, "ASD"); 
+                
+                let maxEIy_kip_ft3 = getMaxDeflectionEI(liveLoadsOnly, L);
+                RequiredIx = (maxEIy_kip_ft3 * 1728) / (E * allowDeflection);
+                
+                logHTML += `• Allowable Deflection = ${allowDeflection.toFixed(3)} in<br>`;
+                logHTML += `• Exact Max Deflection (EI\u0394) = ${maxEIy_kip_ft3.toFixed(2)} kip-ft³<br>`;
+                logHTML += `• Required Ix = <strong>${RequiredIx.toFixed(2)} in⁴</strong><br>`;
+                
+                runEngine(baseFactoredLoads, L, method); 
+            }
+        }
+
+        let validShapes = shapeDatabase.filter(shape => considerServ ? (shape.Zx >= RequiredZx && shape.Ix >= RequiredIx) : (shape.Zx >= RequiredZx));
+        validShapes.sort((a, b) => a.weight - b.weight);
+
+        if (validShapes.length === 0) {
+            document.getElementById("outputLog").innerHTML = logHTML + `<br><strong style="color:var(--danger-red);">Error: No shapes meet criteria.</strong>`;
+            document.getElementById("results").style.display = "block"; return;
+        }
+
+        let selectedShape = validShapes[0];
+        logHTML += `<br>• Initial Pick (Lightest Valid Shape): <strong style="color:var(--accent-cyan);">${selectedShape.name}</strong><br>`;
+
+        const addSelfWeight = document.getElementById("considerSelfWeight").value === "yes";
+        if (addSelfWeight && !isGiven) {
+            logHTML += `<br><strong style="color:var(--accent-orange);">--- Self-Weight Iteration ---</strong><br>`;
+            let safe = false;
+            
+            while(!safe) {
+                let sw = selectedShape.weight / 1000;
+                // Treat self weight as Dead Load. Under your LRFD rule, 1.4 * SW governs.
+                let factoredSW = method === "LRFD" ? 1.4 * sw : sw;
+                
+                let iterationLoads = [...baseFactoredLoads, { type: 'uniform', start: 0, end: L, mag: factoredSW }];
+                let newMu = runEngine(iterationLoads, L, method);
+                
+                let capacity = method === "LRFD" ? (0.9 * fy * selectedShape.Zx) / 12 : (fy * selectedShape.Zx) / (1.67 * 12);
+
+                logHTML += `Testing ${selectedShape.name}: M_max = ${newMu.toFixed(2)} kip-ft | Capacity = ${capacity.toFixed(2)} kip-ft<br>`;
+
+                if (capacity >= newMu) {
+                    safe = true; 
+                    logHTML += `<div style="color:var(--accent-green); font-weight:bold; margin-top:8px; margin-bottom:15px; page-break-inside:avoid; display:block; width:100%;">Status: SAFE. ${selectedShape.name} passes.</div><br>`;
+                } else {
+                    logHTML += `<div style="color:var(--danger-red); font-weight:bold; margin-top:8px; margin-bottom:15px; page-break-inside:avoid; display:block; width:100%;">Status: UNSAFE. Next shape.</div><br>`;
+                    validShapes.shift();
+                    if(validShapes.length === 0) { logHTML += `<div style="color:var(--danger-red); font-weight:bold; margin-top:8px; margin-bottom:15px; page-break-inside:avoid; display:block; width:100%;">Error: Exceeds database limit.</div><br>`; break; }
+                    selectedShape = validShapes[0];
+                }
+            }
+        } else {
+            logHTML += `<br><div style="color:var(--accent-green); font-weight:bold; margin-top:8px; margin-bottom:15px; font-size:1.1rem; page-break-inside:avoid; display:block; width:100%;">Final Selection: ${selectedShape.name}</div><br>`;
+        }
+
+        document.getElementById("outputLog").innerHTML = logHTML;
+        document.getElementById("results").style.display = "block";
+        document.getElementById("results").scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+</script>
+
+</body>
+</html>

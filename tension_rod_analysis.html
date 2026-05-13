@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Analysis - Tension Rods</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        /* --- Boot-Up Animation Styles --- */
+        #boot-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-page); /* Matches your dark background */
+            z-index: 9999; /* Keeps it above everything else */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+
+        .boot-logo {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+
+        .boot-line {
+            width: 0;
+            height: 2px;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+            animation: load-line 1.8s ease-in-out forwards;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(34, 211, 238, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.6)); transform: scale(1.02); }
+        }
+
+        @keyframes load-line {
+            0% { width: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { width: 300px; opacity: 1; }
+        }
+
+        .hide-boot {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        
+        /* Ensure it doesn't show up when printing */
+        @media print {
+            #boot-overlay { display: none !important; }
+        }
+        /* --- End Boot-Up Animation Styles --- */
+        /* --- Back Button Styles --- */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border-color: #3b82f6; 
+            transform: translateX(-3px); 
+        }
+
+        /* --- Global Variables (Matching Compression Theme) --- */
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+            
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Background Glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15);
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12);
+        }
+
+        /* Main Container */
+        .calculator-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 900px; 
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 35px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+
+        /* Forms and Inputs */
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px 30px;
+            margin-bottom: 25px;
+            align-items: start;
+        }
+
+        .input-group.full-width {
+            grid-column: span 2;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 0.85rem; color: var(--text-label); font-weight: 500;
+        }
+
+        input, select {
+            background-color: var(--glass-input);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            color: white;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input[readonly], select:disabled {
+            background-color: rgba(0, 0, 0, 0.4);
+            color: #6b7280;
+            cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px top 50%;
+            background-size: 10px auto;
+            padding-right: 35px;
+        }
+        
+        select option { background-color: #111827; color: white; }
+
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+
+        .custom-input {
+            display: none;
+            margin-top: 10px;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            margin-top: 10px;
+        }
+
+        .btn-calc {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            flex: 2;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3);
+            text-transform: uppercase;
+        }
+        .btn-calc:hover { 
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        .btn-reset {
+            background: transparent; 
+            color: var(--text-label); 
+            border: 1px solid var(--glass-border);
+            padding: 12px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; flex: 1;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .btn-reset:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.2); }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            flex: 1;
+            display: none; 
+            transition: all 0.3s ease;
+        }
+        .btn-pdf:hover { 
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3); 
+            transform: translateY(-2px); 
+            filter: brightness(1.1);
+        }
+
+        /* Results Panel */
+        .results-container {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-top: 10px;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 20px;
+        }
+
+        .results-header h2 {
+            font-size: 1.5rem; font-weight: bold; color: #ffffff; margin: 0 0 10px 0;
+        }
+
+        .results-header h2 span {
+            color: var(--accent-cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+        }
+
+        .results-header p {
+            margin: 0; font-size: 0.85rem; color: var(--text-label); font-weight: 600; letter-spacing: 1px;
+        }
+
+        .results-header p span {
+            color: var(--accent-orange);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            background: var(--glass-panel);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .result-item {
+            display: flex; flex-direction: column; gap: 6px; text-align: center;
+        }
+
+        .result-item h3 {
+            font-size: 0.8rem; color: var(--text-label); text-transform: uppercase; letter-spacing: 1px; margin: 0;
+        }
+
+        .result-item .val {
+            font-size: 1.5rem; font-weight: bold; color: white; margin: 5px 0;
+        }
+        
+        .result-item .val span {
+            color: var(--accent-yellow); text-shadow: 0 0 10px rgba(253, 224, 71, 0.4);
+        }
+
+        .result-item .formula {
+            font-size: 0.75rem; color: #5c7487; font-family: 'Segoe UI', monospace; margin: 0;
+        }
+
+        .limit-table { 
+            width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.95rem; 
+        }
+        .limit-table th { 
+            text-align: left; padding: 15px 10px; color: var(--text-label); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; border-bottom: 1px solid var(--glass-border); 
+        }
+        .limit-table td { 
+            padding: 15px 10px; border-bottom: 1px solid rgba(255,255,255,0.03); color: white; font-weight: bold; font-size: 1.1rem;
+        }
+        .limit-table td:first-child { 
+            font-weight: normal; color: var(--text-main); font-size: 1rem;
+        }
+        .limit-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        #outLrfd, #outAsd {
+            color: var(--accent-cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+        }
+
+    </style>
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL ANALYSIS</div>
+        <div class="boot-line"></div>
+    </div>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <div class="calculator-container">
+        <div class="header">
+            <h1>STEEL ANALYSIS</h1>
+            <span class="badge">TENSION RODS</span>
+        </div>
+
+        <div class="input-grid">
+            <div class="input-group">
+                <label>1. Steel Designation</label>
+                <select id="designationSelect" onchange="onDesignationChange()" required>
+                    </select>
+            </div>
+
+            <div class="input-group">
+                <label>2. Specific Grade (F<sub>u</sub>)</label>
+                <select id="gradeSelect" disabled required>
+                    <option value="" disabled selected hidden>Select Designation First</option>
+                </select>
+                <input type="number" id="customFu" class="custom-input" placeholder="Enter Custom Fu (ksi)">
+            </div>
+
+            <div class="input-group full-width">
+                <label>3. Nominal Rod Diameter (d)</label>
+                <select id="diameterSelect" onchange="onDiameterChange()" required>
+                    </select>
+                <input type="number" step="0.001" id="customD" class="custom-input" placeholder="Enter Custom Diameter (in)">
+            </div>
+        </div>
+
+        <div class="button-group" id="actionButtons">
+            <button class="btn-calc" onclick="calculateAnalysis()">Calculate Analysis</button>
+            <button class="btn-reset" onclick="resetCalculator()">Reset</button>
+            <button class="btn-pdf" id="btnPdf" onclick="downloadFormalPDF()">Save PDF</button>
+        </div>
+
+        <div class="results-container" id="resultsPanel">
+            <div class="results-header">
+                <h2>Selected Rod: <span id="outRod"></span></h2>
+                <p>MATERIAL: <span id="outMaterial"></span></p>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-item">
+                    <h3>Nominal Area (A<sub>B</sub>)</h3>
+                    <p class="val"><span id="outAb">0.00</span> in<sup>2</sup></p>
+                    <p class="formula">&pi;d<sup>2</sup> / 4</p>
+                </div>
+                <div class="result-item">
+                    <h3>Nominal Stress (F<sub>N</sub>)</h3>
+                    <p class="val"><span id="outFn">0.00</span> ksi</p>
+                    <p class="formula">0.75F<sub>u</sub></p>
+                </div>
+                <div class="result-item">
+                    <h3>Nominal Analysis (R<sub>N</sub>)</h3>
+                    <p class="val"><span id="outRn">0.00</span> kips</p>
+                    <p class="formula">F<sub>N</sub>A<sub>B</sub></p>
+                </div>
+            </div>
+
+            <table class="limit-table">
+                <thead>
+                    <tr>
+                        <th style="padding-left: 15px;">LIMIT STATE</th>
+                        <th>LRFD (&Phi;R<sub>N</sub>)</th>
+                        <th>ASD (R<sub>N</sub>/&Omega;)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding-left: 15px;">Tensile Rupture</td>
+                        <td id="outLrfd">0.00 kips</td>
+                        <td id="outAsd">0.00 kips</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    // --- Boot-Up Animation Trigger ---
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            const overlay = document.getElementById('boot-overlay');
+            if (overlay) {
+                overlay.classList.add('hide-boot');
+            }
+        }, 1800); // 1.8 second delay before revealing the site
+    });
+    const steelDb = {
+        "A36": [{label: "A36", fu: 58}],
+        "A53": [{label: "Gr. B", fu: 60}],
+        "A500": [{label: "Gr. B", fu: 58}, {label: "Gr. C", fu: 62}],
+        "A501": [{label: "Gr. A", fu: 58}, {label: "Gr. B", fu: 70}],
+        "A529": [{label: "Gr. 50", fu: 65}, {label: "Gr. 55", fu: 70}],
+        "A572": [{label: "Gr. 42", fu: 60}, {label: "Gr. 50", fu: 65}, {label: "Gr. 55", fu: 70}, {label: "Gr. 60", fu: 75}, {label: "Gr. 65", fu: 80}],
+        "A588": [{label: "A588", fu: 70}],
+        "A618": [{label: "Gr. Ia, Ib, & II", fu: 70}, {label: "Gr. III", fu: 65}],
+        "A709": [{label: "36", fu: 58}, {label: "50", fu: 65}, {label: "50S", fu: 65}, {label: "50W", fu: 70}],
+        "A847": [{label: "A847", fu: 70}],
+        "A913": [{label: "50", fu: 65}, {label: "60", fu: 75}, {label: "70", fu: 80}, {label: "A913", fu: 90}],
+        "A992": [{label: "A992", fu: 65}],
+        "A1043": [{label: "36", fu: 58}, {label: "50", fu: 65}],
+        "A1065": [{label: "Gr. 50", fu: 60}, {label: "Gr. 50W", fu: 70}],
+        "A1085": [{label: "Gr. A", fu: 65}]
+    };
+
+    const diameters = [
+        { label: '1/4"', val: 0.25 }, { label: '3/8"', val: 0.375 },
+        { label: '1/2"', val: 0.5 }, { label: '5/8"', val: 0.625 },
+        { label: '3/4"', val: 0.75 }, { label: '7/8"', val: 0.875 },
+        { label: '1"', val: 1.0 }, { label: '1-1/8"', val: 1.125 },
+        { label: '1-1/4"', val: 1.25 }, { label: '1-1/2"', val: 1.5 },
+        { label: '2"', val: 2.0 }
+    ];
+
+    window.onload = function() {
+        populateDropdowns();
+    };
+
+    function populateDropdowns() {
+        const desigSelect = document.getElementById('designationSelect');
+        const diaSelect = document.getElementById('diameterSelect');
+
+        desigSelect.innerHTML = `<option value="" disabled selected hidden>Select Designation...</option>`;
+        desigSelect.innerHTML += `<option value="custom">Custom...</option>`;
+        for (const desig in steelDb) {
+            desigSelect.innerHTML += `<option value="${desig}">${desig}</option>`;
+        }
+
+        diaSelect.innerHTML = `<option value="" disabled selected hidden>Select Diameter...</option>`;
+        diaSelect.innerHTML += `<option value="custom">Custom...</option>`;
+        diameters.forEach(dia => {
+            diaSelect.innerHTML += `<option value="${dia.val}" data-label='${dia.label}'>${dia.label}</option>`;
+        });
+    }
+
+    function onDesignationChange() {
+        const desigSelect = document.getElementById('designationSelect');
+        const gradeSelect = document.getElementById('gradeSelect');
+        const customFu = document.getElementById('customFu');
+
+        gradeSelect.innerHTML = '';
+        customFu.style.display = 'none';
+
+        if (desigSelect.value === 'custom') {
+            gradeSelect.innerHTML = `<option value="" disabled selected hidden>Custom Grade Selected</option>`;
+            gradeSelect.disabled = true; 
+            customFu.style.display = 'block'; 
+        } else {
+            const grades = steelDb[desigSelect.value];
+
+            if (grades.length === 1) {
+                const g = grades[0];
+                let displayLabel = (g.label === desigSelect.value) ? `Base Grade` : g.label;
+                
+                gradeSelect.innerHTML = `<option value="${g.fu}" data-fullname="${desigSelect.value} ${g.label}" selected>${displayLabel} (F<sub>u</sub> = ${g.fu} ksi)</option>`;
+                gradeSelect.disabled = true; 
+            } else {
+                gradeSelect.disabled = false;
+                gradeSelect.innerHTML = `<option value="" disabled selected hidden>Select Specific Grade...</option>`;
+                
+                grades.forEach(g => {
+                    let displayLabel = (g.label === desigSelect.value) ? `Base Grade` : g.label;
+                    gradeSelect.innerHTML += `<option value="${g.fu}" data-fullname="${desigSelect.value} ${g.label}">${displayLabel} (F<sub>u</sub> = ${g.fu} ksi)</option>`;
+                });
+            }
+        }
+    }
+
+    function onDiameterChange() {
+        const diaSelect = document.getElementById('diameterSelect');
+        const customD = document.getElementById('customD');
+        customD.style.display = (diaSelect.value === 'custom') ? 'block' : 'none';
+    }
+
+    function calculateAnalysis() {
+        const desigSelect = document.getElementById('designationSelect');
+        const gradeSelect = document.getElementById('gradeSelect');
+        const diaSelect = document.getElementById('diameterSelect');
+        const customFu = document.getElementById('customFu');
+        const customD = document.getElementById('customD');
+
+        let fu = 0;
+        let d = 0;
+        let materialText = "";
+        let rodText = "";
+
+        if (desigSelect.value === '') {
+            alert("Please select a Steel Designation.");
+            return;
+        }
+
+        if (desigSelect.value === 'custom') {
+            fu = parseFloat(customFu.value);
+            if (isNaN(fu) || fu <= 0) { 
+                alert("Please enter a valid numeric Custom Fu (ksi)."); 
+                return; 
+            }
+            materialText = `CUSTOM STEEL (F<sub>U</sub> = ${fu} KSI)`;
+        } else {
+            if (gradeSelect.value === '') {
+                alert("Please select a Specific Grade.");
+                return;
+            }
+            fu = parseFloat(gradeSelect.value);
+            const selOption = gradeSelect.options[gradeSelect.selectedIndex];
+            materialText = `${selOption.dataset.fullname.toUpperCase()} (F<sub>U</sub> = ${fu} KSI)`;
+        }
+
+        if (diaSelect.value === '') {
+            alert("Please select a Nominal Rod Diameter.");
+            return;
+        }
+
+        if (diaSelect.value === 'custom') {
+            d = parseFloat(customD.value);
+            if (isNaN(d) || d <= 0) { 
+                alert("Please enter a valid numeric Custom Diameter (in)."); 
+                return; 
+            }
+            rodText = `Ø ${d}"`;
+        } else {
+            d = parseFloat(diaSelect.value);
+            const selOption = diaSelect.options[diaSelect.selectedIndex];
+            rodText = `Ø ${selOption.dataset.label}`;
+        }
+
+        const ab = (Math.PI * Math.pow(d, 2)) / 4;
+        const fn = 0.75 * fu;
+        const rn = fn * ab;
+        const lrfd = 0.75 * rn;
+        const asd = 0.5 * rn;
+
+        document.getElementById('outRod').innerHTML = rodText;
+        document.getElementById('outMaterial').innerHTML = materialText;
+        
+        document.getElementById('outAb').innerText = ab.toFixed(3);
+        document.getElementById('outFn').innerText = fn.toFixed(2);
+        document.getElementById('outRn').innerText = rn.toFixed(2);
+        
+        document.getElementById('outLrfd').innerText = lrfd.toFixed(2) + " kips";
+        document.getElementById('outAsd').innerText = asd.toFixed(2) + " kips";
+
+        document.getElementById('resultsPanel').style.display = 'block';
+        document.getElementById('btnPdf').style.display = 'block';
+    }
+
+    function resetCalculator() {
+        document.getElementById('designationSelect').value = '';
+        document.getElementById('diameterSelect').value = '';
+
+        const gradeSelect = document.getElementById('gradeSelect');
+        gradeSelect.innerHTML = `<option value="" disabled selected hidden>Select Designation First</option>`;
+        gradeSelect.disabled = true;
+
+        const customFu = document.getElementById('customFu');
+        customFu.value = '';
+        customFu.style.display = 'none';
+
+        const customD = document.getElementById('customD');
+        customD.value = '';
+        customD.style.display = 'none';
+
+        document.getElementById('resultsPanel').style.display = 'none';
+        document.getElementById('btnPdf').style.display = 'none';
+    }
+
+    function downloadFormalPDF() {
+        // Extract values from the UI
+        const material = document.getElementById('outMaterial').innerHTML;
+        const rod = document.getElementById('outRod').innerHTML;
+        const ab = document.getElementById('outAb').innerText;
+        const fn = document.getElementById('outFn').innerText;
+        const rn = document.getElementById('outRn').innerText;
+        const lrfd = document.getElementById('outLrfd').innerText;
+        const asd = document.getElementById('outAsd').innerText;
+
+        // Build a perfectly clean, formal HTML string specifically for the PDF
+        const pdfContent = `
+            <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; padding: 40px; color: #000; background: #fff; max-width: 800px; margin: 0 auto;">
+                
+                <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 20px; margin-bottom: 40px;">
+                    <h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 2px;">STEEL ANALYSIS REPORT</h1>
+                    <h3 style="margin: 8px 0 0 0; font-size: 16px; font-weight: 600; color: #f97316;">TENSION RODS</h3>
+                </div>
+                
+                <h2 style="font-size: 18px; color: #000; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 20px;">1. INPUT PARAMETERS</h2>
+                <table style="width: 100%; font-size: 14px; margin-bottom: 40px; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px 0; width: 40%;"><strong>Material Specification:</strong></td>
+                        <td style="padding: 10px 0;">${material}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-top: 1px dashed #eee;"><strong>Nominal Rod Diameter:</strong></td>
+                        <td style="padding: 10px 0; border-top: 1px dashed #eee;">${rod}</td>
+                    </tr>
+                </table>
+
+                <h2 style="font-size: 18px; color: #000; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 20px;">2. NOMINAL PROPERTIES</h2>
+                <table style="width: 100%; font-size: 14px; margin-bottom: 40px; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 10px 0; width: 40%;"><strong>Nominal Area (A<sub>B</sub>):</strong></td>
+                        <td style="padding: 10px 0;">${ab} in<sup>2</sup></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-top: 1px dashed #eee;"><strong>Nominal Stress (F<sub>N</sub>):</strong></td>
+                        <td style="padding: 10px 0; border-top: 1px dashed #eee;">${fn} ksi</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; border-top: 1px dashed #eee;"><strong>Nominal Strength (R<sub>N</sub>):</strong></td>
+                        <td style="padding: 10px 0; border-top: 1px dashed #eee;">${rn} kips</td>
+                    </tr>
+                </table>
+
+                <h2 style="font-size: 18px; color: #000; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 20px;">3. DESIGN LIMIT STATE</h2>
+                <table style="width: 100%; font-size: 14px; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 15px; border: 1px solid #333; background-color: #f4f4f4;">LIMIT STATE</th>
+                            <th style="padding: 15px; border: 1px solid #333; background-color: #f4f4f4;">LRFD (&Phi;R<sub>N</sub>)</th>
+                            <th style="padding: 15px; border: 1px solid #333; background-color: #f4f4f4;">ASD (R<sub>N</sub>/&Omega;)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 15px; border: 1px solid #ccc;"><strong>Tensile Rupture</strong></td>
+                            <td style="padding: 15px; border: 1px solid #ccc; font-weight: bold;">${lrfd}</td>
+                            <td style="padding: 15px; border: 1px solid #ccc; font-weight: bold;">${asd}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-top: 60px; font-size: 11px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+                    <p>Generated by Steel Analysis - Tension Rods | Date: ${new Date().toLocaleDateString()}</p>
+                </div>
+            </div>
+        `;
+
+        // PDF Generation Options
+        const opt = {
+            margin:       0.5,
+            filename:     'Formal_Steel_Analysis_Report.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        // Instantly builds and downloads the PDF from the hidden formal layout
+        html2pdf().set(opt).from(pdfContent).save();
+    }
+</script>
+
+</body>
+</html>

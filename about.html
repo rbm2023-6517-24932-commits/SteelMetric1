@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelMetric - About</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-cyan: #22d3ee;
+            --accent-blue: #38bdf8;
+            --accent-orange: #f97316;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        body {
+            background: var(--bg-page);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            opacity: 0;
+            animation: fadeInPage 0.5s ease forwards;
+        }
+
+        body.fade-out-page {
+            opacity: 0 !important;
+            transition: opacity 0.4s ease;
+        }
+
+        @keyframes fadeInPage {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Ambient background glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15);
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12);
+        }
+
+        /* Navigation */
+        header {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 35px 10%;
+            z-index: 10;
+            animation: fadeIn 0.6s ease both;
+            animation-delay: 0.1s;
+        }
+
+        .header-nav {
+            list-style: none;
+            display: flex;
+            gap: 40px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-nav li {
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        .header-nav li:nth-child(1) { animation-delay: 0.2s; }
+        .header-nav li:nth-child(2) { animation-delay: 0.35s; }
+        .header-nav li:nth-child(3) { animation-delay: 0.5s; }
+
+        .header-nav li a {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-label);
+            text-transform: uppercase;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .header-nav li a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+        }
+
+        .header-nav li a.active {
+            color: #ffffff;
+            font-weight: 800;
+        }
+
+        /* Main Layout */
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            min-height: 0;
+            overflow: hidden;
+            gap: 35px;
+            padding: 80px 60px 40px 60px;
+        }
+
+        /* Team Section */
+        .team-section {
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        .team-intro {
+            font-size: 14px;
+            font-weight: 300;
+            font-style: italic;
+            color: var(--text-label);
+            margin-bottom: 22px;
+        }
+
+        .team-list {
+            display: flex;
+            justify-content: center;
+            gap: 65px;
+        }
+
+        .team-member {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .profile-pic-wrapper {
+            position: relative;
+            width: 85px;
+            height: 85px;
+            margin-bottom: 10px;
+        }
+
+        .profile-pic {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #1a2332;
+            border: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .profile-pic-wrapper:hover .profile-pic {
+            filter: brightness(0.4);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+        }
+
+        .social-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .profile-pic-wrapper:hover .social-overlay {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .social-link {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #040914;
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(34, 211, 238, 0.3);
+        }
+
+        .social-link:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 15px rgba(34, 211, 238, 0.5);
+        }
+
+        .team-member h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #ffffff;
+        }
+
+        .team-member p {
+            font-size: 12px;
+            font-style: italic;
+            color: var(--text-label);
+        }
+
+        /* Sliding Info Box */
+        .info-box-wrapper {
+            width: 100%;
+            max-width: 680px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .info-box {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+            border: 1px solid var(--glass-border);
+            border-top: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 0;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            backdrop-filter: blur(16px);
+            overflow: hidden;
+            position: relative;
+            min-height: 180px;
+        }
+
+        .slides-track {
+            display: flex;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 200%;
+            height: 100%;
+        }
+
+        .slide-panel {
+            width: 50%;
+            flex-shrink: 0;
+            text-align: center;
+            padding: 30px 45px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 180px;
+        }
+
+        .slide-title {
+            margin-bottom: 12px;
+            font-size: 20px;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .slide-text {
+            max-width: 560px;
+            margin: 0 auto;
+            color: var(--text-main);
+            font-size: 14px;
+            line-height: 1.6;
+            font-weight: 300;
+        }
+
+        .slide-text strong {
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        /* Slide indicators */
+        .slide-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .dot.active {
+            background: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+            transform: scale(1.2);
+        }
+    </style>
+
+</head>
+<body>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <header>
+        <nav>
+            <ul class="header-nav">
+                <li><a href="index.html" class="page-link">Home</a></li>
+                <li><a href="guide.html" class="page-link">Guide</a></li>
+                <li><a href="about.html" class="page-link active">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="main-container">
+
+        <div class="team-section">
+            <p class="team-intro">This platform was built by a collaborative team of Third Year Civil Engineering students<br>from Bicol University.</p>
+
+            <div class="team-list">
+                <div class="team-member">
+                    <div class="profile-pic-wrapper">
+                        <img src="judd.jpg" alt="Judd Ezra Bazarte" class="profile-pic">
+                        <div class="social-overlay">
+                            <a href="https://www.facebook.com/juddezra" target="_blank" class="social-link" title="Facebook"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+                            <a href="https://www.instagram.com/e_zrazzz/" target="_blank" class="social-link" title="Instagram"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                            <a href="https://www.tiktok.com/@user1820312370108" target="_blank" class="social-link" title="TikTok"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.89 2.89 2.89 0 012.88-2.89c.3 0 .59.05.86.13V9.4a6.37 6.37 0 00-.86-.06A6.34 6.34 0 003 15.66a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.56a8.15 8.15 0 004.77 1.54V6.8a4.85 4.85 0 01-1.86-.11z"/></svg></a>
+                        </div>
+                    </div>
+                    <h3>JUDD EZRA BAZARTE</h3>
+                    <p>jenb2023-1816-37746@bicol-u.edu.ph</p>
+                </div>
+                <div class="team-member">
+                    <div class="profile-pic-wrapper">
+                        <img src="raphael.jpg" alt="Raphael Mirabueno" class="profile-pic">
+                        <div class="social-overlay">
+                            <a href="https://www.facebook.com/rphlmrbn/" target="_blank" class="social-link" title="Facebook"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+                            <a href="https://www.instagram.com/rphlmrbn/" target="_blank" class="social-link" title="Instagram"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                            <a href="https://www.tiktok.com/@wadduprap?lang=en" target="_blank" class="social-link" title="TikTok"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.89 2.89 2.89 0 012.88-2.89c.3 0 .59.05.86.13V9.4a6.37 6.37 0 00-.86-.06A6.34 6.34 0 003 15.66a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.56a8.15 8.15 0 004.77 1.54V6.8a4.85 4.85 0 01-1.86-.11z"/></svg></a>
+                        </div>
+                    </div>
+                    <h3>RAPHAEL MIRABUENO</h3>
+                    <p>rbm2023-6517-24932@bicol-u.edu.ph</p>
+                </div>
+                <div class="team-member">
+                    <div class="profile-pic-wrapper">
+                        <img src="airah.jpg" alt="Airah Revadinera" class="profile-pic">
+                        <div class="social-overlay">
+                            <a href="https://www.facebook.com/revadinera.airah" target="_blank" class="social-link" title="Facebook"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+                            <a href="https://www.instagram.com/_airarchives/" target="_blank" class="social-link" title="Instagram"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>
+                            <a href="https://tiktok.com" target="_blank" class="social-link" title="TikTok"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.88-2.89 2.89 2.89 0 012.88-2.89c.3 0 .59.05.86.13V9.4a6.37 6.37 0 00-.86-.06A6.34 6.34 0 003 15.66a6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.34-6.34V8.56a8.15 8.15 0 004.77 1.54V6.8a4.85 4.85 0 01-1.86-.11z"/></svg></a>
+                        </div>
+                    </div>
+                    <h3>AIRAH REVADINERA</h3>
+                    <p>aar2023-2954-50538@bicol-u.edu.ph</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box-wrapper">
+            <div class="info-box">
+                <div class="slides-track" id="slidesTrack">
+                    <div class="slide-panel">
+                        <h2 class="slide-title">ABOUT THE PROJECT</h2>
+                        <p class="slide-text">
+                            <strong>SteelMetric</strong> was developed to bridge the gap between theoretical computations and practical engineering applications. Our mission is to provide users with a beginner-friendly, interactive web calculator designed to assist in the analysis of structural steel members.
+                        </p>
+                    </div>
+                    <div class="slide-panel">
+                        <h2 class="slide-title">ACKNOWLEDGMENT</h2>
+                        <p class="slide-text">
+                            We would like to express our sincere gratitude to everyone who helped us complete this project. Special thanks to our instructor in <strong>Principles of Steel Design</strong>, <strong>Engr. Alvin B. Luzong</strong>, for teaching us valuable lessons in this course. The knowledge we gained equipped us to create this project. Furthermore, we would like to commend the project proponents for giving their best efforts. It is our hope that this program will help many people with computations involving the analysis and design of steel members.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-dots">
+                <div class="dot active" data-index="0"></div>
+                <div class="dot" data-index="1"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-sliding panels (horizontal slide)
+        const track = document.getElementById('slidesTrack');
+        const dots = document.querySelectorAll('.dot');
+        let currentSlide = 0;
+        const totalSlides = 2;
+        const slideInterval = 8000; // 5 seconds
+
+        function showSlide(index) {
+            track.style.transform = `translateX(-${index * 50}%)`;
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+            currentSlide = index;
+        }
+
+        function nextSlide() {
+            const next = (currentSlide + 1) % totalSlides;
+            showSlide(next);
+        }
+
+        let autoSlide = setInterval(nextSlide, slideInterval);
+
+        // Click on dots to manually switch
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                clearInterval(autoSlide);
+                showSlide(parseInt(dot.dataset.index));
+                autoSlide = setInterval(nextSlide, slideInterval);
+            });
+        });
+
+        // Handle Smooth Page Transitions
+        document.querySelectorAll('.page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault(); 
+                const targetUrl = this.getAttribute('href');
+                document.body.classList.add('fade-out-page');
+                setTimeout(() => {
+                    window.location.href = targetUrl;
+                }, 400);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel Design - Axial Tension</title>
+    <script src="database.js"></script>
+    <style>
+        :root {
+            --bg-page: #040914;
+            --bg-dark: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-blue: #38bdf8;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #f97316;
+            --accent-yellow: #fde047;
+            --accent-green: #10b981;
+            --danger-red: #ef4444;
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-input: rgba(0, 0, 0, 0.25);
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body {
+            background-color: var(--bg-page); color: var(--text-main);
+            display: flex; justify-content: center; align-items: flex-start;
+            min-height: 100vh; margin: 0; padding: 40px 20px;
+            overflow-x: hidden; position: relative;
+        }
+        #boot-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-dark); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease-in-out, visibility 0.8s;
+        }
+        .boot-logo {
+            font-size: 2.5rem; font-weight: 900; letter-spacing: 6px; color: #ffffff;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-orange));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            animation: pulse-glow 1.5s infinite alternate; margin-bottom: 20px;
+        }
+        .boot-line {
+            width: 0; height: 2px; background: var(--accent-orange);
+            box-shadow: 0 0 15px var(--accent-orange); animation: load-line 1.8s ease-in-out forwards;
+        }
+        @keyframes pulse-glow {
+            0% { opacity: 0.6; filter: drop-shadow(0 0 5px rgba(255, 115, 21, 0.2)); transform: scale(0.98); }
+            100% { opacity: 1; filter: drop-shadow(0 0 20px rgba(255, 115, 21, 0.6)); transform: scale(1.02); }
+        }
+        @keyframes load-line { 0% { width: 0; opacity: 0; } 50% { opacity: 1; } 100% { width: 300px; opacity: 1; } }
+        .hide-boot { opacity: 0; visibility: hidden; pointer-events: none; }
+        @media print { #boot-overlay { display: none !important; } }
+        .back-btn {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255, 255, 255, 0.05); color: #e2e8f0;
+            text-decoration: none; padding: 10px 16px; border-radius: 8px;
+            font-size: 14px; font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease; z-index: 1000;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.15); color: #ffffff;
+            border-color: #3b82f6; transform: translateX(-3px);
+        }
+        .bg-blob {
+            position: fixed; border-radius: 50%; filter: blur(120px);
+            z-index: -1; opacity: 0.6; pointer-events: none;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(34, 211, 238, 0.15); }
+        .blob-2 { bottom: -10%; right: -5%; width: 45vw; height: 45vw; background: rgba(249, 115, 22, 0.12); }
+        .calculator-container {
+            background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            width: 100%; max-width: 1050px; padding: 40px; border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .header {
+            text-align: center; margin-bottom: 35px;
+            display: flex; justify-content: center; align-items: center; gap: 15px;
+        }
+        .header h1 {
+            font-size: 1.8rem; letter-spacing: 4px; margin: 0;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+        .badge {
+            background: linear-gradient(135deg, var(--accent-orange), #ea580c); color: white;
+            padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;
+            letter-spacing: 1px; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; margin-bottom: 25px; align-items: start; }
+        .form-group, .sub-form-group { display: flex; flex-direction: column; gap: 6px; }
+        .left-column-container, .right-column-container { display: flex; flex-direction: column; gap: 18px; }
+        .input-wrapper { display: flex; align-items: center; gap: 10px; }
+        label { font-size: 0.85rem; color: var(--text-label); font-weight: 500; }
+        input, select {
+            background-color: var(--glass-input); backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); color: white;
+            padding: 12px 14px; border-radius: 8px; font-size: 0.95rem;
+            transition: all 0.3s ease; width: 100%;
+        }
+        input.value-input { width: 100px; text-align: center; }
+        input[readonly], input:disabled, select:disabled {
+            background-color: rgba(0, 0, 0, 0.4); color: #6b7280; cursor: not-allowed;
+            border-color: rgba(255,255,255,0.03);
+        }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat; background-position: right 14px top 50%;
+            background-size: 10px auto; padding-right: 35px;
+        }
+        select option { background-color: #111827; color: white; }
+        select:invalid { color: rgba(255, 255, 255, 0.5); }
+        input:focus, select:focus {
+            outline: none; border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+        }
+        ::placeholder { color: rgba(255, 255, 255, 0.5); font-size: 0.95rem; }
+        .unit-label { color: var(--text-label); font-size: 0.95rem; }
+        .segments-section {
+            background: var(--glass-panel); border: 1px solid var(--glass-border);
+            border-radius: 12px; backdrop-filter: blur(10px);
+            display: block; padding: 25px; margin-bottom: 30px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .segments-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;
+        }
+        .segments-header h3 { margin: 0; font-size: 1.15rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 1px; }
+        .grid-2 {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 20px 30px; margin-bottom: 20px; align-items: start;
+        }
+        .button-group { display: flex; gap: 15px; margin-top: 20px; }
+        .btn-calculate {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            color: #040914; border: 1px solid rgba(255,255,255,0.2);
+            padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800;
+            letter-spacing: 1px; cursor: pointer; width: 100%; transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(34, 211, 238, 0.3); text-transform: uppercase;
+        }
+        .btn-calculate:hover {
+            box-shadow: 0 12px 25px rgba(34, 211, 238, 0.5);
+            transform: translateY(-2px); filter: brightness(1.1);
+        }
+        .btn-secondary {
+            background: transparent; color: var(--text-label); border: 1px solid var(--glass-border);
+            padding: 16px; border-radius: 8px; font-size: 1.1rem; font-weight: 800;
+            letter-spacing: 1px; cursor: pointer; width: 30%; transition: all 0.3s ease;
+            backdrop-filter: blur(5px); text-transform: uppercase;
+        }
+        .btn-secondary:hover {
+            background: rgba(239, 68, 68, 0.15); color: var(--danger-red);
+            border-color: rgba(239, 68, 68, 0.5); transform: translateY(-2px);
+        }
+        #results {
+            margin-top: 35px; display: none;
+            animation: fadeIn 0.5s ease-out;
+            flex-direction: column; gap: 20px;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        #results .result-highlight {
+            font-size: 2.2rem; font-weight: bold; color: var(--accent-orange);
+            line-height: 1; text-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+            text-align: center; margin-bottom: 10px;
+        }
+        #results .grid-2 {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        }
+        #results .grid-2 > div {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid var(--glass-border); border-top: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; padding: 25px 30px; display: flex; flex-direction: column; gap: 12px;
+            backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        #results .result-item {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;
+            font-size: 0.95rem; color: var(--text-main);
+        }
+        #results .result-item:last-child { border-bottom: none; padding-bottom: 0; }
+        #results .result-item strong { color: var(--text-label); font-weight: 500; }
+        #results > div:last-child:not(.grid-2):not(.result-highlight) {
+            margin-top: 5px; padding: 15px;
+            background: rgba(34, 211, 238, 0.05); border: 1px solid rgba(34, 211, 238, 0.2);
+            border-radius: 8px; text-align: center;
+        }
+        #results > div[style*="#FF5555"] {
+            padding: 20px; background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; text-align: center;
+        }
+        @media print {
+            body { background-color: white; background-image: none; color: black; padding: 0; margin: 0; display: block; }
+            .bg-blob, #boot-overlay, .back-btn { display: none !important; }
+            .calculator-container {
+                background: white !important; backdrop-filter: none !important;
+                border: 1px solid #ccc !important; box-shadow: none !important; color: black !important;
+            }
+            .calculator-container * { color: black !important; text-shadow: none !important; }
+            input, select { background: white !important; border: 1px solid #999 !important; color: black !important; }
+            .btn-calculate, .btn-secondary { display: none !important; }
+            #results { display: block !important; border: 1px solid #ccc; }
+            #results .grid-2 > div { background: white !important; border: 1px solid #999 !important; box-shadow: none !important; }
+        }
+    </style>
+
+</head>
+<body>
+    <div id="boot-overlay">
+        <div class="boot-logo">STEEL DESIGN</div>
+        <div class="boot-line"></div>
+    </div>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+    <div class="calculator-container">
+        <div class="header">
+            <h1>STEEL DESIGN</h1>
+            <span class="badge">AXIAL TENSION</span>
+        </div>
+        <div class="form-grid">
+            <div class="left-column-container">
+                <div class="sub-form-group">
+                    <label>Design Method</label>
+                    <select id="designMethod" required>
+                        <option value="" disabled selected hidden>Select method</option>
+                        <option value="LRFD">LRFD</option>
+                        <option value="ASD">ASD</option>
+                    </select>
+                </div>
+                <div class="sub-form-group">
+                    <label>Section Type</label>
+                    <select id="sectionType" onchange="updateConnectionLocations()" required>
+                        <option value="" disabled selected hidden>Select section type</option>
+                        <option value="W">W</option>
+                        <option value="M">M</option>
+                        <option value="S">S</option>
+                        <option value="HP">HP</option>
+                        <option value="C">C</option>
+                        <option value="MC">MC</option>
+                        <option value="L">L</option>
+                        <option value="2L">2L</option>
+                        <option value="WT">WT</option>
+                        <option value="MT">MT</option>
+                        <option value="ST">ST</option>
+                        <option value="HSS">HSS</option>
+                        <option value="PIPE">PIPE</option>
+                    </select>
+                </div>
+                <div class="sub-form-group">
+                    <label>Steel Designation (ASTM)</label>
+                    <select id="steelDesignation" onchange="updateGrades()" required></select>
+                </div>
+                <div class="sub-form-group">
+                    <label>Steel Grade</label>
+                    <select id="steelGrade" onchange="updateFyFu()" required></select>
+                </div>
+                <div class="sub-form-group">
+                    <label>Yield Strength, Fy</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="fyInput" class="value-input" placeholder="Yield Strength" value="" disabled>
+                        <span class="unit-label">ksi</span>
+                    </div>
+                </div>
+                <div class="sub-form-group">
+                    <label>Tensile Strength, Fu</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="fuInput" class="value-input" placeholder="Tensile Strength" value="" disabled>
+                        <span class="unit-label">ksi</span>
+                    </div>
+                </div>
+            </div>
+            <div class="right-column-container">
+                <div class="sub-form-group">
+                    <label>Load Type</label>
+                    <select id="loadType" onchange="updateLoadInputs()" required>
+                        <option value="" disabled selected hidden>Select load type</option>
+                        <option value="factored">Already Factored / Single Load</option>
+                        <option value="separate">Separate Dead Load and Live Load</option>
+                    </select>
+                </div>
+                <div class="grid-2" id="loadInputsArea"></div>
+            </div>
+        </div>
+        <div class="segments-section">
+            <div class="segments-header">
+                <h3>Connection Details & Initial Assumptions</h3>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Fastener Diameter (in)</label>
+                    <input type="number" step="0.0625" id="fastenerDia" placeholder="Select diameter" value="">
+                </div>
+                <div class="form-group">
+                    <label>Hole Preparation Type</label>
+                    <select id="holeType" required>
+                        <option value="" disabled selected hidden>Select hole type</option>
+                        <option value="none">None (Exact Diameter)</option>
+                        <option value="hole">Standard Hole (+ 1/16&quot;)</option>
+                        <option value="bolt">Bolt Consideration (+ 1/8&quot;)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Number of Holes in Cross Section</label>
+                    <input type="number" id="numHoles" placeholder="Select number of holes" min="1" value="">
+                </div>
+                <div class="form-group">
+                    <label>Connection Location</label>
+                    <select id="connLocation" required></select>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Consider Length/radius of gyration (L/r &le; 300)?</label>
+                    <select id="considerSlenderness" onchange="updateLengthInput()" required>
+                        <option value="" disabled selected hidden>Select option</option>
+                        <option value="no">No</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Unbraced Length, L (ft)</label>
+                    <input type="number" id="unbracedLength" placeholder="Select unbraced length" value="" disabled>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Assumed An/Ag Ratio</label>
+                    <select id="anAgRatio" onchange="toggleCustom('anAgRatio', 'customAnAg')" required>
+                        <option value="" disabled selected hidden>Select An/Ag ratio</option>
+                        <option value="0.85">0.85</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="number" step="0.01" id="customAnAg" style="display:none; margin-top:8px;" placeholder="Select Custom Ratio" value="">
+                </div>
+                <div class="form-group">
+                    <label>Assumed Shear Lag Factor (U)</label>
+                    <select id="shearLag" onchange="toggleCustom('shearLag', 'customShearLag')" required>
+                        <option value="" disabled selected hidden>Select shear lag factor</option>
+                        <option value="0.8">0.8 (&ge; 4 bolts per line)</option>
+                        <option value="0.6">0.6 (2-3 bolts per line)</option>
+                        <option value="1.0">1.0 (All elements connected)</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <input type="number" step="0.01" id="customShearLag" style="display:none; margin-top:8px;" placeholder="Select Custom U" value="">
+                </div>
+            </div>
+        </div>
+        <div class="button-group">
+            <button class="btn-calculate" onclick="calculate()">SELECT OPTIMAL SECTION</button>
+            <button class="btn-secondary" onclick="resetCalculator()">RESET</button>
+        </div>
+        <div id="results" class="results-panel"></div>
+    </div>
+    <script>
+    // --- INITIALIZATION ---
+    window.onload = function() {
+        setTimeout(() => {
+            const overlay = document.getElementById('boot-overlay');
+            if (overlay) overlay.classList.add('hide-boot');
+        }, 1800);
+
+        if (typeof materials === 'undefined' || typeof shapes === 'undefined') {
+            alert("Error: Could not find database.js. Please ensure it is saved in the same folder as this HTML file.");
+            return;
+        }
+
+        let desigSelect = document.getElementById("steelDesignation");
+        desigSelect.add(new Option("Select designation", "", true, true));
+        desigSelect.options[0].disabled = true;
+        desigSelect.options[0].hidden = true;
+
+        for (let desig in materials) {
+            desigSelect.add(new Option(desig, desig));
+        }
+
+        updateGrades();
+        updateLoadInputs();
+        updateConnectionLocations();
+
+        document.querySelectorAll('input, select').forEach(element => {
+            element.addEventListener('input', () => {
+                document.getElementById('results').style.display = 'none';
+            });
+            element.addEventListener('change', () => {
+                document.getElementById('results').style.display = 'none';
+            });
+        });
+    };
+
+    // --- DYNAMIC UI UPDATES ---
+    function updateGrades() {
+        let desig = document.getElementById("steelDesignation").value;
+        let gradeSelect = document.getElementById("steelGrade");
+        let fyInput = document.getElementById("fyInput");
+        let fuInput = document.getElementById("fuInput");
+
+        gradeSelect.innerHTML = "";
+        gradeSelect.add(new Option("Select grade", "", true, true));
+        gradeSelect.options[0].disabled = true;
+        gradeSelect.options[0].hidden = true;
+
+        if (!desig) {
+            gradeSelect.disabled = true;
+            fyInput.value = "";
+            fuInput.value = "";
+            return;
+        }
+
+        let grades = materials[desig].grades;
+        let gradeKeys = Object.keys(grades);
+
+        if (desig === "Custom") {
+            gradeSelect.add(new Option("Custom", "Custom"));
+            gradeSelect.disabled = true;
+            fyInput.disabled = false;
+            fuInput.disabled = false;
+            fyInput.value = "";
+            fuInput.value = "";
+        } else {
+            gradeSelect.disabled = gradeKeys.length === 1 && gradeKeys[0] === "Standard";
+            gradeKeys.forEach(g => gradeSelect.add(new Option(g, g)));
+
+            if (gradeKeys.length === 1) {
+                gradeSelect.value = gradeKeys[0];
+            }
+
+            fyInput.disabled = true;
+            fuInput.disabled = true;
+            updateFyFu();
+        }
+    }
+
+    function updateFyFu() {
+        let desig = document.getElementById("steelDesignation").value;
+        let grade = document.getElementById("steelGrade").value;
+
+        if (!desig || !grade) {
+            document.getElementById("fyInput").value = "";
+            document.getElementById("fuInput").value = "";
+            return;
+        }
+
+        if (desig !== "Custom") {
+            let props = materials[desig].grades[grade];
+            document.getElementById("fyInput").value = props.Fy;
+            document.getElementById("fuInput").value = props.Fu;
+        }
+    }
+
+    function updateLoadInputs() {
+        let type = document.getElementById("loadType").value;
+        let area = document.getElementById("loadInputsArea");
+        if (type === "separate") {
+            area.innerHTML = `
+                <div class="form-group">
+                    <label>Dead Load, DL (kips)</label>
+                    <input type="number" id="dlInput" placeholder="Select Dead Load" value="">
+                </div>
+                <div class="form-group">
+                    <label>Live Load, LL (kips)</label>
+                    <input type="number" id="llInput" placeholder="Select Live Load" value="">
+                </div>
+            `;
+        } else if (type === "factored") {
+            area.innerHTML = `
+                <div class="form-group">
+                    <label>Applied Load (kips)</label>
+                    <input type="number" id="factoredLoadInput" placeholder="Select Factored Load" value="">
+                </div>
+            `;
+        } else {
+            area.innerHTML = "";
+        }
+
+        document.querySelectorAll('#loadInputsArea input').forEach(element => {
+            element.addEventListener('input', () => {
+                document.getElementById('results').style.display = 'none';
+            });
+        });
+    }
+
+    function updateConnectionLocations() {
+        let shape = document.getElementById("sectionType").value;
+        let loc = document.getElementById("connLocation");
+        loc.innerHTML = "";
+
+        loc.add(new Option("Select connection location", "", true, true));
+        loc.options[0].disabled = true;
+        loc.options[0].hidden = true;
+
+        if (!shape) return;
+
+        let flangeWebGroup = ["W", "M", "S", "HP", "C", "MC", "WT", "MT", "ST"];
+        let angleGroup = ["L", "2L"];
+
+        if (flangeWebGroup.includes(shape)) {
+            loc.add(new Option("Flange Only", "flange"));
+            loc.add(new Option("Web Only", "web"));
+            loc.add(new Option("Both Flange & Web", "both"));
+        } else if (angleGroup.includes(shape)) {
+            loc.add(new Option("Vertical Leg", "flange"));
+            loc.add(new Option("Horizontal Leg", "web"));
+            loc.add(new Option("Both Legs", "both"));
+        } else {
+            loc.add(new Option("Standard Element", "standard"));
+        }
+    }
+
+    function updateLengthInput() {
+        let consider = document.getElementById("considerSlenderness").value;
+        let unbracedL = document.getElementById("unbracedLength");
+        if (consider === "no" || !consider) {
+            unbracedL.disabled = true;
+            unbracedL.value = "";
+        } else {
+            unbracedL.disabled = false;
+        }
+    }
+
+    function toggleCustom(selectId, inputId) {
+        let val = document.getElementById(selectId).value;
+        let customInput = document.getElementById(inputId);
+        if (val === "custom") {
+            customInput.style.display = "block";
+        } else {
+            customInput.style.display = "none";
+            customInput.value = "";
+        }
+    }
+
+    // --- CALCULATION ENGINE ---
+    function calculate() {
+        let resDiv = document.getElementById("results");
+
+        let method = document.getElementById("designMethod").value;
+        let targetShapeType = document.getElementById("sectionType").value;
+        let loadType = document.getElementById("loadType").value;
+        let holeType = document.getElementById("holeType").value;
+        let location = document.getElementById("connLocation").value;
+        let considerSlen = document.getElementById("considerSlenderness").value;
+        let anAgSelect = document.getElementById("anAgRatio").value;
+        let uSelect = document.getElementById("shearLag").value;
+
+        let fastenerDia = parseFloat(document.getElementById("fastenerDia").value);
+        let numHoles = parseInt(document.getElementById("numHoles").value);
+        let Fy = parseFloat(document.getElementById("fyInput").value);
+        let Fu = parseFloat(document.getElementById("fuInput").value);
+
+        if (!method || !targetShapeType || !loadType || !holeType || !location || !considerSlen || !anAgSelect || !uSelect || isNaN(fastenerDia) || isNaN(numHoles) || isNaN(Fy) || isNaN(Fu)) {
+            resDiv.style.display = "block";
+            resDiv.innerHTML = `<div style="color:#FF5555; font-weight:bold;">Error: Please fill in all required fields and dropdown options.</div>`;
+            return;
+        }
+
+        let Pu = 0;
+        if (loadType === "separate") {
+            let DL = parseFloat(document.getElementById("dlInput").value);
+            let LL = parseFloat(document.getElementById("llInput").value);
+            if (isNaN(DL) || isNaN(LL)) {
+                resDiv.style.display = "block";
+                resDiv.innerHTML = `<div style="color:#FF5555; font-weight:bold;">Error: Please enter the separated loads.</div>`;
+                return;
+            }
+            if (method === "LRFD") {
+                Pu = Math.max(1.2 * DL + 1.6 * LL, 1.4 * DL);
+            } else {
+                Pu = DL + LL;
+            }
+        } else {
+            Pu = parseFloat(document.getElementById("factoredLoadInput").value);
+            if (isNaN(Pu)) {
+                resDiv.style.display = "block";
+                resDiv.innerHTML = `<div style="color:#FF5555; font-weight:bold;">Error: Please enter the factored load.</div>`;
+                return;
+            }
+        }
+
+        let holeModifier = 0;
+        if (holeType === "hole") {
+            holeModifier = 1.0 / 16.0;
+        } else if (holeType === "bolt") {
+            holeModifier = 1.0 / 8.0;
+        }
+        let totalHoleDia = fastenerDia + holeModifier;
+
+        let unbracedL = parseFloat(document.getElementById("unbracedLength").value || 0);
+        if (considerSlen === "yes" && isNaN(unbracedL)) {
+            resDiv.style.display = "block";
+            resDiv.innerHTML = `<div style="color:#FF5555; font-weight:bold;">Error: Please enter the unbraced length.</div>`;
+            return;
+        }
+        let rmin_req = (considerSlen === "yes") ? ((unbracedL * 12) / 300) : 0;
+
+        let assumedAnAg = (anAgSelect === "custom") ? parseFloat(document.getElementById("customAnAg").value) : parseFloat(anAgSelect);
+        let assumedU = (uSelect === "custom") ? parseFloat(document.getElementById("customShearLag").value) : parseFloat(uSelect);
+
+        if (isNaN(assumedAnAg) || isNaN(assumedU)) {
+            resDiv.style.display = "block";
+            resDiv.innerHTML = `<div style="color:#FF5555; font-weight:bold;">Error: Please enter your custom ratio/factor.</div>`;
+            return;
+        }
+
+        let Ag_req_yield = 0;
+        let Ae_req_fracture = 0;
+
+        if (method === "LRFD") {
+            Ag_req_yield = Pu / (0.90 * Fy);
+            Ae_req_fracture = Pu / (0.75 * Fu);
+        } else {
+            Ag_req_yield = Pu / (Fy / 1.67);
+            Ae_req_fracture = Pu / (Fu / 2.0);
+        }
+
+        let estimatedAn = Ae_req_fracture / assumedU;
+        let Ag_req_fracture = estimatedAn / assumedAnAg;
+        let Governing_Ag = Math.max(Ag_req_yield, Ag_req_fracture);
+
+        let selectedShape = null;
+        let actualAn = 0;
+        let actualAe = 0;
+
+        for (let i = 0; i < shapes.length; i++) {
+            let shape = shapes[i];
+
+            if (shape.Type !== targetShapeType) continue;
+            if (shape.Ag < Governing_Ag) continue;
+            if (shape.rmin < rmin_req) continue;
+
+            let holeArea = 0;
+            if (location === "flange" || location === "standard") {
+                holeArea = numHoles * totalHoleDia * shape.tf;
+            } else if (location === "web") {
+                holeArea = numHoles * totalHoleDia * shape.tw;
+            } else if (location === "both") {
+                holeArea = numHoles * totalHoleDia * (shape.tf + shape.tw);
+            }
+
+            actualAn = shape.Ag - holeArea;
+            actualAe = actualAn * assumedU;
+
+            if (actualAe >= Ae_req_fracture) {
+                selectedShape = shape;
+                break; 
+            }
+        }
+
+        resDiv.style.display = "block";
+
+        if (selectedShape) {
+            resDiv.innerHTML = `
+                <div class="result-highlight">Optimal Section: ${selectedShape.Label}</div>
+                <div class="grid-2">
+                    <div>
+                        <div class="result-item"><strong>Design Load:</strong> <span>${Pu.toFixed(2)} kips</span></div>
+                        <div class="result-item"><strong>Governing Required Ag:</strong> <span>${Governing_Ag.toFixed(2)} in²</span></div>
+                        <div class="result-item"><strong>Required Ae:</strong> <span>${Ae_req_fracture.toFixed(2)} in²</span></div>
+                    </div>
+                    <div>
+                        <div class="result-item"><strong>Provided Ag:</strong> <span>${selectedShape.Ag.toFixed(2)} in²</span></div>
+                        <div class="result-item"><strong>Actual Net Area (An):</strong> <span>${actualAn.toFixed(2)} in²</span></div>
+                        <div class="result-item"><strong>Actual Eff. Area (Ae):</strong> <span>${actualAe.toFixed(2)} in²</span></div>
+                    </div>
+                </div>
+                ${considerSlen === 'yes' ? `<div style="margin-top:10px; color:var(--accent-cyan)"><strong>Slenderness Check:</strong> Required rmin = ${rmin_req.toFixed(2)} in | Provided rmin = ${selectedShape.rmin.toFixed(2)} in</div>` : ''}
+            `;
+        } else {
+            resDiv.innerHTML = `<div style="color:#FF5555; font-weight:bold;">No suitable section found in the loaded database. Please check your loads or assumed ratios.</div>`;
+        }
+    }
+
+    function resetCalculator() {
+        document.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+
+        document.querySelectorAll('input').forEach(input => {
+            input.value = "";
+        });
+
+        document.getElementById('customAnAg').style.display = "none";
+        document.getElementById('customShearLag').style.display = "none";
+        document.getElementById('results').style.display = "none";
+
+        updateGrades();
+        updateLoadInputs();
+        updateConnectionLocations();
+        updateLengthInput();
+    }
+    </script>
+</body>
+</html>

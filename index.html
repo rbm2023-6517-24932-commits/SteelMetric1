@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelMetric - Home</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-page: #040914;
+            --text-main: #f3f4f6;
+            --text-label: #9ca3af;
+            --accent-cyan: #22d3ee;
+            --accent-blue: #38bdf8;
+            --accent-orange: #f97316;
+
+            /* Glassmorphism Variables */
+            --glass-bg: rgba(17, 24, 39, 0.55);
+            --glass-panel: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Base styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            color: var(--text-main);
+            background: var(--bg-page);
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient background glows */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .blob-1 {
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: rgba(34, 211, 238, 0.15);
+        }
+        .blob-2 {
+            bottom: -10%; right: -5%;
+            width: 45vw; height: 45vw;
+            background: rgba(249, 115, 22, 0.12);
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+
+        /* ===================== */
+        /* PAGE LOAD ANIMATIONS  */
+        /* ===================== */
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeSlideLeft {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes subLinkPop {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header / Navigation styles */
+        header {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 40px 10%;
+            z-index: 10;
+            animation: fadeIn 0.6s ease both;
+            animation-delay: 0.1s;
+        }
+
+        .header-nav {
+            list-style: none;
+            display: flex;
+            gap: 40px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-nav li {
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        .header-nav li:nth-child(1) { animation-delay: 0.2s; }
+        .header-nav li:nth-child(2) { animation-delay: 0.35s; }
+        .header-nav li:nth-child(3) { animation-delay: 0.5s; }
+
+        .header-nav li a {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-label);
+            text-transform: uppercase;
+        }
+
+        .header-nav li a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+        }
+
+        /* Main content layout */
+        main {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10%;
+            padding-top: 100px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-left {
+            max-width: 50%;
+        }
+
+        .main-left h1 {
+            font-size: 100px;
+            font-weight: 800;
+            margin: 0 0 20px 0;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #ffffff, var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.1;
+            opacity: 0;
+            animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.3s;
+        }
+
+        .main-left p {
+            font-size: 24px;
+            color: var(--text-label);
+            margin: 0;
+            letter-spacing: 1px;
+            opacity: 0;
+            animation: fadeSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            animation-delay: 0.5s;
+        }
+
+        /* Right-side content */
+        .main-right {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            align-items: flex-end;
+            width: 45%;
+        }
+
+        .menu-group {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            opacity: 0;
+            animation: fadeSlideLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .menu-group:nth-child(1) { animation-delay: 0.45s; }
+        .menu-group:nth-child(2) { animation-delay: 0.58s; }
+        .menu-group:nth-child(3) { animation-delay: 0.71s; }
+        .menu-group:nth-child(4) { animation-delay: 0.84s; }
+
+        /* HEAVY GLASSMORPHISM - Main pill buttons */
+        .design-toggle {
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            border-top: 1px solid rgba(255, 255, 255, 0.3); 
+
+            border-radius: 50px; 
+            padding: 22px 30px;
+            text-align: center;
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #e2e8f0; 
+            cursor: pointer; 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); 
+
+            transition: background 0.35s ease,
+                        border-color 0.35s ease,
+                        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        box-shadow 0.35s ease,
+                        color 0.3s ease;
+        }
+
+        .design-toggle:hover {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.25) 0%, rgba(34, 211, 238, 0.05) 100%);
+            border-color: rgba(34, 211, 238, 0.5);
+            border-top: 1px solid rgba(34, 211, 238, 0.8);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(34, 211, 238, 0.25);
+            color: #ffffff;
+        }
+
+        .design-toggle:active {
+            transform: translateY(0px) scale(0.98);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .design-toggle.open {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(34, 211, 238, 0.03) 100%);
+            border-color: rgba(34, 211, 238, 0.35);
+            border-top: 1px solid rgba(34, 211, 238, 0.6);
+            color: #dff0ff;
+        }
+
+        /* Sub-menu container using CSS Grid */
+        .sub-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            gap: 12px;
+            margin-top: 0;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            pointer-events: none;
+            transform-origin: top center;
+            transition: opacity 0.35s ease,
+                        max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                        margin-top 0.35s ease;
+        }
+
+        .sub-menu.active {
+            opacity: 1;
+            max-height: 300px;
+            margin-top: 12px;
+            pointer-events: all;
+        }
+
+        .sub-menu.active .sub-link {
+            animation: subLinkPop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .sub-menu.active .sub-link:nth-child(1) { animation-delay: 0.05s; }
+        .sub-menu.active .sub-link:nth-child(2) { animation-delay: 0.1s; }
+        .sub-menu.active .sub-link:nth-child(3) { animation-delay: 0.15s; }
+        .sub-menu.active .sub-link:nth-child(4) { animation-delay: 0.2s; }
+
+        /* HEAVY GLASSMORPHISM - Sub-menu links */
+        .sub-link {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            box-sizing: border-box;
+
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-top: 1px solid rgba(255, 255, 255, 0.2); 
+
+            border-radius: 50px;
+            padding: 15px 18px;
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.4;
+            font-weight: 600;
+            color: #94a3b8; 
+
+            transition: background 0.3s ease,
+                        color 0.3s ease,
+                        border-color 0.3s ease,
+                        transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        box-shadow 0.3s ease;
+        }
+
+        .sub-link:hover {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(34, 211, 238, 0.02) 100%);
+            color: #ffffff;
+            border-color: rgba(34, 211, 238, 0.4); 
+            border-top: 1px solid rgba(34, 211, 238, 0.7);
+            box-shadow: 0 4px 15px rgba(34, 211, 238, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .sub-link:active {
+            transform: scale(0.97);
+            transition: transform 0.1s ease;
+        }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+
+    <header>
+        <nav>
+            <ul class="header-nav">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="guide.html">Guide</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="main-left">
+            <h1>STEEL DESIGN</h1>
+            <p>Calculate. Create. Construct.</p>
+        </div>
+
+        <div class="main-right">
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle">Axial Tension</a>
+                <div class="sub-menu">
+                    <a href="axial-tension-analysis.html" class="sub-link">Axial Tension<br>Analysis</a>
+                    <a href="axial-tension-design.html" class="sub-link">Axial Tension<br>Design</a>
+                    <a href="tension_rod_analysis.html" class="sub-link">Tension Rods<br>Analysis</a>
+                    <a href="tension_rod_design.html" class="sub-link">Tension Rods<br>Design</a>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle">Axial Compression</a>
+                <div class="sub-menu">
+                    <a href="Compression-Members-Analysis.html" class="sub-link">Compression Members<br>Analysis</a>
+                    <a href="Compression-Members-Design.html" class="sub-link">Compression Members<br>Design</a>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle">Members for Bending</a>
+                <div class="sub-menu">
+                    <a href="members_for_bending_analysis.html" class="sub-link">Members for Bending<br>Analysis</a>
+                    <a href="members_for_bending_design.html" class="sub-link">Members for Bending<br>Design</a>
+                </div>
+            </div>
+
+            <div class="menu-group">
+                <a href="#" class="design-toggle">Shear Strength of Structural Members</a>
+                <div class="sub-menu">
+                    <a href="shear-analysis.html" class="sub-link">Shear Strength<br>Analysis</a>
+                    <a href="shear-design.html" class="sub-link">Shear Strength<br>Design</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const toggles = document.querySelectorAll('.design-toggle');
+
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault(); 
+
+                const subMenu = this.nextElementSibling;
+                const isOpen = subMenu.classList.contains('active');
+
+                document.querySelectorAll('.sub-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+                document.querySelectorAll('.design-toggle').forEach(btn => {
+                    btn.classList.remove('open');
+                });
+
+                if (!isOpen) {
+                    subMenu.classList.add('active');
+                    this.classList.add('open');
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
